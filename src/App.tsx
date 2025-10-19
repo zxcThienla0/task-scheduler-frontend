@@ -16,7 +16,7 @@ function App() {
 
 
     const basename = process.env.NODE_ENV === 'production'
-        ? '/task-scheduler'
+        ? ''
         : '';
 
     return (
