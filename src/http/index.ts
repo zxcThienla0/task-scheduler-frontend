@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5050/api';
+const API_URL = 'https://task-scheduler-production-d118.up.railway.app/api';
 
 const $api = axios.create({
     withCredentials: true,
