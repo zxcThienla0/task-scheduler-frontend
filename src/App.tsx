@@ -52,14 +52,24 @@ function App() {
                         </nav>
                     </div>
                     <main className="">
-                        <Routes>
-                            <Route path="/" element={<Dashboard/>}/>
-                            <Route path="/register" element={<Register/>}/>
-                            <Route path="/login" element={<Login/>}/>
-                            <Route path="/calendar/:calendarId" element={<CalendarPage/>}/>
-                            <Route path="/shared/:token" element={<SharedCalendarPage/>}/>
-                            <Route path="*" element={<Navigate to="/" replace/>}/>
-                        </Routes>
+                        {!isAuth ? (
+                            <Routes>
+                                <Route path="/" element={<Register/>}/>
+                                <Route path="/login" element={<Login/>}/>
+                                <Route path="/calendar/:calendarId" element={<CalendarPage/>}/>
+                                <Route path="/shared/:token" element={<SharedCalendarPage/>}/>
+                                <Route path="*" element={<Navigate to="/" replace/>}/>
+                            </Routes>
+                        ) : (
+                            <Routes>
+                                <Route path="/" element={<Dashboard/>}/>
+                                <Route path="/register" element={<Register/>}/>
+                                <Route path="/login" element={<Login/>}/>
+                                <Route path="/calendar/:calendarId" element={<CalendarPage/>}/>
+                                <Route path="/shared/:token" element={<SharedCalendarPage/>}/>
+                                <Route path="*" element={<Navigate to="/" replace/>}/>
+                            </Routes>)}
+
                     </main>
                 </div>
             </Router>
