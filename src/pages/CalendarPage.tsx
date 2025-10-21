@@ -245,7 +245,7 @@ export const CalendarPage: React.FC = () => {
     }
 
     return (
-        <div className="max-w-7xl p-3 mx-auto">
+        <div className="p-3 mx-auto">
             <div className="flex justify-between items-center mb-6">
                 <div>
                     <h1 className="text-2xl font-bold">{calendar.name}</h1>
