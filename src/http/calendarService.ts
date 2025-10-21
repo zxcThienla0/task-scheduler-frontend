@@ -24,5 +24,10 @@ export const calendarService = {
     async deleteCalendar(id: string): Promise<void> {
         const response = await $api.delete(`/calendar/${id}`);
         return response.data;
+    },
+
+    async updateCalendar(calendarId: string, data: CreateCalendarData) {
+        const response = await $api.put(`/calendar/${calendarId}`, data);
+        return response.data;
     }
 };

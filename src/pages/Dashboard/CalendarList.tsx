@@ -9,13 +9,8 @@ interface Calendar {
     createdAt: string;
 }
 
-interface CreateCalendarData {
-    name: string;
-    description?: string;
-}
-
 interface CalendarListProps {
-    onAddCalendar?: () => void;
+    onAddCalendar: () => void;
     refreshTrigger?: number;
 }
 
@@ -28,6 +23,11 @@ interface ApiError {
     message?: string;
 }
 
+interface EditCalendarData {
+    name: string;
+    description?: string;
+}
+
 export const CalendarList: React.FC<CalendarListProps> = ({
                                                               onAddCalendar,
                                                               refreshTrigger
@@ -36,11 +36,13 @@ export const CalendarList: React.FC<CalendarListProps> = ({
     const [calendars, setCalendars] = useState<Calendar[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
-    const [isCreating, setIsCreating] = useState(false);
-    const [createForm, setCreateForm] = useState({
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [editingCalendar, setEditingCalendar] = useState<Calendar | null>(null);
+    const [editFormData, setEditFormData] = useState<EditCalendarData>({
         name: '',
         description: ''
     });
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
         loadCalendars();
@@ -50,7 +52,7 @@ export const CalendarList: React.FC<CalendarListProps> = ({
         try {
             setIsLoading(true);
             const calendarsData = await calendarService.getCalendars();
-            setCalendars(calendarsData);
+            setCalendars(calendarsData as Calendar[]);
         } catch (error: unknown) {
             console.error('Ошибка загрузки календарей:', error);
         } finally {
@@ -70,46 +72,54 @@ export const CalendarList: React.FC<CalendarListProps> = ({
         }
     };
 
-    const handleCreateCalendar = async () => {
-        if (!createForm.name.trim()) {
-            setError('Название календаря обязательно');
-            return;
-        }
-
-        try {
-            const calendarData: CreateCalendarData = {
-                name: createForm.name.trim(),
-                description: createForm.description.trim() || undefined
-            };
-
-            await calendarService.createCalendar(calendarData);
-
-            setCreateForm({name: '', description: ''});
-            setIsCreating(false);
-            setError('');
-
-            await loadCalendars();
-
-            onAddCalendar?.();
-
-        } catch (error: unknown) {
-            const err = error as ApiError;
-            setError(err.response?.data?.message || 'Ошибка создания календаря');
+    const handleEditCalendar = (calendarId: string) => {
+        const calendarToEdit = calendars.find(cal => cal.id === calendarId);
+        if (calendarToEdit) {
+            setEditingCalendar(calendarToEdit);
+            setEditFormData({
+                name: calendarToEdit.name,
+                description: calendarToEdit.description || ''
+            });
+            setIsEditModalOpen(true);
         }
     };
 
+    const handleCloseModal = () => {
+        setIsEditModalOpen(false);
+        setEditingCalendar(null);
+        setEditFormData({ name: '', description: '' });
+    };
+
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        const {name, value} = e.target;
-        setCreateForm(prev => ({
+        const { name, value } = e.target;
+        setEditFormData(prev => ({
             ...prev,
             [name]: value
         }));
     };
 
-    const handleCancelCreate = () => {
-        setIsCreating(false);
-        setCreateForm({name: '', description: ''});
-        setError('');
+    const handleSubmitEdit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingCalendar) return;
+
+        setIsSubmitting(true);
+        try {
+            await calendarService.updateCalendar(editingCalendar.id, editFormData);
+
+            // Обновляем список календарей
+            setCalendars(calendars.map(cal =>
+                cal.id === editingCalendar.id
+                    ? { ...cal, ...editFormData }
+                    : cal
+            ));
+
+            handleCloseModal();
+        } catch (error: unknown) {
+            const err = error as ApiError;
+            setError(err.response?.data?.message || 'Ошибка обновления календаря');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     if (isLoading) {
@@ -120,7 +130,7 @@ export const CalendarList: React.FC<CalendarListProps> = ({
         );
     }
 
-    if (error && !isCreating) {
+    if (error) {
         return (
             <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
                 {error}
@@ -136,87 +146,12 @@ export const CalendarList: React.FC<CalendarListProps> = ({
 
     return (
         <div>
-            {/* Кнопка для открытия формы создания */}
-            {calendars.length > 0 && (
-                <div className="mb-6 flex justify-end">
-                    <button
-                        onClick={() => setIsCreating(true)}
-                        className="bg-indigo-600 text-white px-6 py-2 rounded-md hover:bg-indigo-700 transition-colors"
-                    >
-                        + Создать календарь
-                    </button>
-                </div>
-            )}
-
-            {/* Модальное окно/форма создания */}
-            {isCreating && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                    <div className="bg-white rounded-lg p-6 w-full max-w-md">
-                        <h3 className="text-lg font-semibold mb-4">Создать новый календарь</h3>
-
-                        {error && (
-                            <div
-                                className="bg-red-100 border border-red-400 text-red-700 px-3 py-2 rounded mb-4 text-sm">
-                                {error}
-                            </div>
-                        )}
-
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Название *
-                                </label>
-                                <input
-                                    type="text"
-                                    name="name"
-                                    value={createForm.name}
-                                    onChange={handleInputChange}
-                                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                                    placeholder="Введите название календаря"
-                                    autoFocus
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Описание
-                                </label>
-                                <textarea
-                                    name="description"
-                                    value={createForm.description}
-                                    onChange={handleInputChange}
-                                    rows={3}
-                                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                                    placeholder="Введите описание календаря (необязательно)"
-                                />
-                            </div>
-                        </div>
-
-                        <div className="flex justify-end space-x-3 mt-6">
-                            <button
-                                onClick={handleCancelCreate}
-                                className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
-                            >
-                                Отмена
-                            </button>
-                            <button
-                                onClick={handleCreateCalendar}
-                                disabled={!createForm.name.trim()}
-                                className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-                            >
-                                Создать
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
             {calendars.length === 0 ? (
                 <div className="text-center py-12">
                     <div className="text-gray-500 text-lg mb-4">У вас пока нет календарей</div>
                     <button
-                        onClick={() => setIsCreating(true)}
-                        className="bg-indigo-600 text-white px-6 py-2 rounded-md hover:bg-indigo-700 transition-colors"
+                        onClick={onAddCalendar}
+                        className="bg-indigo-600 text-white px-6 py-2 rounded-md hover:bg-indigo-700"
                     >
                         Создать первый календарь
                     </button>
@@ -226,7 +161,7 @@ export const CalendarList: React.FC<CalendarListProps> = ({
                     {calendars.map((calendar) => (
                         <div
                             key={calendar.id}
-                            className="border border-gray-200 rounded-lg p-4 shadow-md hover:shadow-lg transition-shadow"
+                            className="border border-gray-200 rounded-lg p-4 shadow-md transition-shadow"
                         >
                             <h3 className="font-semibold text-lg mb-2">{calendar.name}</h3>
                             {calendar.description && (
@@ -239,13 +174,19 @@ export const CalendarList: React.FC<CalendarListProps> = ({
                                 <div className="flex space-x-2">
                                     <button
                                         onClick={() => navigate(`/calendar/${calendar.id}`)}
-                                        className="text-indigo-600 hover:text-indigo-800 text-sm transition-colors"
+                                        className="text-indigo-600 hover:text-indigo-800 text-sm"
                                     >
                                         Открыть
                                     </button>
                                     <button
+                                        onClick={() => handleEditCalendar(calendar.id)}
+                                        className="text-blue-600 hover:text-blue-800 text-sm"
+                                    >
+                                        Редактировать
+                                    </button>
+                                    <button
                                         onClick={() => handleDeleteCalendar(calendar.id)}
-                                        className="text-red-600 hover:text-red-800 text-sm transition-colors"
+                                        className="text-red-600 hover:text-red-800 text-sm"
                                     >
                                         Удалить
                                     </button>
@@ -253,6 +194,71 @@ export const CalendarList: React.FC<CalendarListProps> = ({
                             </div>
                         </div>
                     ))}
+                </div>
+            )}
+
+            {/* Модальное окно редактирования */}
+            {isEditModalOpen && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                    <div className="bg-white rounded-lg w-full max-w-md">
+                        <div className="flex justify-between items-center p-6 border-b">
+                            <h2 className="text-xl font-semibold">Редактировать календарь</h2>
+                            <button
+                                onClick={handleCloseModal}
+                                className="text-gray-400 hover:text-gray-600"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleSubmitEdit} className="p-6">
+                            <div className="mb-4">
+                                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                                    Название календаря *
+                                </label>
+                                <input
+                                    type="text"
+                                    id="name"
+                                    name="name"
+                                    value={editFormData.name}
+                                    onChange={handleInputChange}
+                                    required
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                />
+                            </div>
+
+                            <div className="mb-6">
+                                <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
+                                    Описание
+                                </label>
+                                <textarea
+                                    id="description"
+                                    name="description"
+                                    value={editFormData.description}
+                                    onChange={handleInputChange}
+                                    rows={3}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                />
+                            </div>
+
+                            <div className="flex justify-end space-x-3">
+                                <button
+                                    type="button"
+                                    onClick={handleCloseModal}
+                                    className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                                >
+                                    Отмена
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={isSubmitting || !editFormData.name.trim()}
+                                    className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {isSubmitting ? 'Сохранение...' : 'Сохранить'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             )}
         </div>
