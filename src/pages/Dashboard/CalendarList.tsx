@@ -106,7 +106,6 @@ export const CalendarList: React.FC<CalendarListProps> = ({
         try {
             await calendarService.updateCalendar(editingCalendar.id, editFormData);
 
-            // Обновляем список календарей
             setCalendars(calendars.map(cal =>
                 cal.id === editingCalendar.id
                     ? { ...cal, ...editFormData }
@@ -197,9 +196,8 @@ export const CalendarList: React.FC<CalendarListProps> = ({
                 </div>
             )}
 
-            {/* Модальное окно редактирования */}
             {isEditModalOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                <div className="fixed inset-0 bg-[#00000080] flex items-center justify-center z-50">
                     <div className="bg-white rounded-lg w-full max-w-md">
                         <div className="flex justify-between items-center p-6 border-b">
                             <h2 className="text-xl font-semibold">Редактировать календарь</h2>
