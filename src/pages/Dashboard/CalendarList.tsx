@@ -173,19 +173,19 @@ export const CalendarList: React.FC<CalendarListProps> = ({
                                 <div className="flex space-x-2">
                                     <button
                                         onClick={() => navigate(`/calendar/${calendar.id}`)}
-                                        className="text-indigo-600 hover:text-indigo-800 text-sm"
+                                        className="text-blue-600 hover:text-indigo-800 text-sm border rounded p-1 border-blue-600"
                                     >
                                         Открыть
                                     </button>
                                     <button
                                         onClick={() => handleEditCalendar(calendar.id)}
-                                        className="text-blue-600 hover:text-blue-800 text-sm"
+                                        className="text-blue-600 hover:text-blue-800 text-sm border rounded p-1 border-blue-600"
                                     >
                                         Редактировать
                                     </button>
                                     <button
                                         onClick={() => handleDeleteCalendar(calendar.id)}
-                                        className="text-red-600 hover:text-red-800 text-sm"
+                                        className="text-red-600 hover:text-red-800 text-sm border rounded p-1 border-red-600"
                                     >
                                         Удалить
                                     </button>

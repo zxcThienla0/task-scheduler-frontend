@@ -24,7 +24,7 @@ export const Dashboard: React.FC = () => {
                 </div>
             </header>
 
-            <main className="max-w-7xl mx-auto px-3 py-6">
+            <main className="max-w-7xl mx-auto py-6">
                 {currentView === 'list' && (
                     <CalendarList
                         onAddCalendar={() => setCurrentView('create')}
