@@ -252,15 +252,6 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                         </div>
                     ))}
                 </div>
-
-                <div className="text-center">
-                    <div className="text-sm text-gray-500 select-none">
-                        {sortByAlphabet
-                            ? 'Сотрудники отсортированы по алфавиту'
-                            : 'Сотрудники в оригинальном порядке'
-                        }
-                    </div>
-                </div>
             </div>
         </div>
     );
