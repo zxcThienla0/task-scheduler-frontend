@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useMemo} from 'react';
 
 interface Employee {
     id: string;
@@ -37,17 +37,14 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
     const [currentDate, setCurrentDate] = useState(new Date());
     const [sortByAlphabet, setSortByAlphabet] = useState(false);
     const [daysInMonth, setDaysInMonth] = useState<Date[]>([]);
-    const [sortedEmployees, setSortedEmployees] = useState<Employee[]>([]);
 
-    useEffect(() => {
+    const sortedEmployees = useMemo(() => {
         if (sortByAlphabet) {
-            const sorted = [...employees].sort((a, b) =>
+            return [...employees].sort((a, b) =>
                 a.name.localeCompare(b.name, 'ru')
             );
-            setSortedEmployees(sorted);
-        } else {
-            setSortedEmployees(employees);
         }
+        return employees;
     }, [employees, sortByAlphabet]);
 
     useEffect(() => {
