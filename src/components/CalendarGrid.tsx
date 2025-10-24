@@ -35,7 +35,20 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                                                               isReadOnly = false
                                                           }) => {
     const [currentDate, setCurrentDate] = useState(new Date());
+    const [sortByAlphabet, setSortByAlphabet] = useState(false);
     const [daysInMonth, setDaysInMonth] = useState<Date[]>([]);
+    const [sortedEmployees, setSortedEmployees] = useState<Employee[]>([]);
+
+    useEffect(() => {
+        if (sortByAlphabet) {
+            const sorted = [...employees].sort((a, b) =>
+                a.name.localeCompare(b.name, 'ru')
+            );
+            setSortedEmployees(sorted);
+        } else {
+            setSortedEmployees(employees);
+        }
+    }, [employees, sortByAlphabet]);
 
     useEffect(() => {
         generateCalendarDays();
@@ -59,6 +72,10 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
             shift.employeeId === employeeId &&
             new Date(shift.date).toDateString() === date.toDateString()
         );
+    };
+
+    const handleEmployeeHeaderClick = () => {
+        setSortByAlphabet(prev => !prev);
     };
 
     const handleShiftClick = (employeeId: string, date: Date, currentShiftType: string) => {
@@ -106,6 +123,11 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                             year: 'numeric'
                         })}
                     </h2>
+                    {sortByAlphabet && (
+                        <div className="text-sm text-blue-600 mt-1 select-none">
+                            Сортировка по алфавиту
+                        </div>
+                    )}
                 </div>
 
                 <button
@@ -120,8 +142,29 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                 <table className="min-w-full border-collapse select-none">
                     <thead>
                     <tr>
-                        <th className="border border-gray-300 bg-white p-2 min-w-24 mr-1 sticky left-0 z-10 select-none">
-                            Сотрудник
+                        <th
+                            className={`
+                                border border-gray-300 p-2 min-w-24 mr-1 sticky left-0 z-10 
+                                select-none cursor-pointer transition-colors
+                                ${sortByAlphabet
+                                ? 'bg-blue-50 border-blue-300 hover:bg-blue-100'
+                                : 'bg-white hover:bg-gray-100'
+                            }
+                            `}
+                            onClick={handleEmployeeHeaderClick}
+                            title={sortByAlphabet
+                                ? "Нажмите чтобы отключить сортировку по алфавиту"
+                                : "Нажмите чтобы включить сортировку по алфавиту"
+                            }
+                        >
+                            <div className="flex items-center justify-between">
+                                <span className="font-medium">Сотрудник</span>
+                                <div className="flex flex-col ml-1">
+                                    <span className={`text-xs ${sortByAlphabet ? 'text-blue-500' : 'text-gray-400'}`}>
+                                        {sortByAlphabet ? '↓' : '↕'}
+                                    </span>
+                                </div>
+                            </div>
                         </th>
                         {daysInMonth.map(day => {
                             const isWeekend = day.getDay() === 0 || day.getDay() === 6;
@@ -146,9 +189,13 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                     </thead>
 
                     <tbody>
-                    {employees.map(employee => (
+                    {sortedEmployees.map(employee => (
                         <tr key={employee.id}>
-                            <td className="border border-gray-300 bg-white p-2 font-medium sticky left-0 z-10 select-none">
+                            <td className={`
+                                border border-gray-300 p-2 font-medium sticky left-0 z-10 
+                                select-none
+                                ${sortByAlphabet ? 'bg-blue-50' : 'bg-white'}
+                            `}>
                                 {employee.name}
                             </td>
 
@@ -204,6 +251,15 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                             <span className="text-sm text-gray-600 select-none">{type.title}</span>
                         </div>
                     ))}
+                </div>
+
+                <div className="text-center">
+                    <div className="text-sm text-gray-500 select-none">
+                        {sortByAlphabet
+                            ? 'Сотрудники отсортированы по алфавиту'
+                            : 'Сотрудники в оригинальном порядке'
+                        }
+                    </div>
                 </div>
             </div>
         </div>
