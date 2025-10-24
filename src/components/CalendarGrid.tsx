@@ -125,7 +125,7 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
 
     return (
         <div className="select-none mb-3 ">
-            <div className="flex justify-between items-center mb-6 max-w-[1440] mx-auto">
+            <div className="flex justify-between items-center mb-6">
                 <button
                     onClick={goToPreviousMonth}
                     className="bg-white border-black border-1 text-1xl text-black px-4 py-2 rounded transition-colors select-none"
