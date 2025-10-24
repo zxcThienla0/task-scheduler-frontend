@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, Navigate } from 'react-router-dom';
-import { shareLinkService } from '../http/shareLinkService';
-import { CalendarGrid } from '../components/CalendarGrid';
+import React, {useState, useEffect} from 'react';
+import {useParams, Navigate} from 'react-router-dom';
+import {shareLinkService} from '../http/shareLinkService';
+import {CalendarGrid} from '../components/CalendarGrid';
 
 interface Calendar {
     id: string;
@@ -35,7 +35,7 @@ interface SharedData {
 }
 
 export const SharedCalendarPage: React.FC = () => {
-    const { token } = useParams<{ token: string }>();
+    const {token} = useParams<{ token: string }>();
     const [sharedData, setSharedData] = useState<SharedData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
@@ -91,32 +91,33 @@ export const SharedCalendarPage: React.FC = () => {
     }
 
     if (!sharedData) {
-        return <Navigate to="/" replace />;
+        return <Navigate to="/" replace/>;
     }
 
     return (
-        <div className="max-w-7xl mx-auto">
-            <div className="mb-6">
-                <div className="flex justify-between items-start">
-                    <div>
-                        <h1 className="text-2xl font-bold">{sharedData.calendar.name}</h1>
-                        {sharedData.calendar.description && (
-                            <p className="text-gray-600 mt-2">{sharedData.calendar.description}</p>
-                        )}
-                        <p className="text-sm text-gray-500 mt-2">
-                            📧 Поделился: {sharedData.sharedBy.name} ({sharedData.sharedBy.email})
-                        </p>
-                    </div>
-                    <div className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
-                        📋 Общий доступ
+        <div className="mt-2">
+            <div className={"max-w-7xl mx-auto"}>
+                <div className="mb-6">
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <h1 className="text-2xl font-bold">{sharedData.calendar.name}</h1>
+                            {sharedData.calendar.description && (
+                                <p className="text-gray-600 mt-2">{sharedData.calendar.description}</p>
+                            )}
+                            <p className="text-sm text-gray-500 mt-2">
+                                📧 Поделился: {sharedData.sharedBy.name} ({sharedData.sharedBy.email})
+                            </p>
+                        </div>
+                        <div className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
+                            📋 Общий доступ
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-6">
-                <p>🔒 Режим просмотра. Изменения недоступны.</p>
+                <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-6">
+                    <p>🔒 Режим просмотра. Изменения недоступны.</p>
+                </div>
             </div>
-
             <CalendarGrid
                 employees={sharedData.calendar.employees || []}
                 shifts={sharedData.calendar.shifts || []}
