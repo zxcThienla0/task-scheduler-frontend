@@ -26,14 +26,14 @@ function App() {
                     <div className="bg-black text-white p-4">
                         <nav className='container flex justify-between'>
                             <ul className="flex space-x-4">
-                                <li><Link to="/" className="p-2 border rounded border-white">Главная</Link></li>
+                                <li><Link to="/" className="">Главная</Link></li>
                             </ul>
                             <ul className="flex w-auto">
                                 {!isAuth ? (
                                     <>
-                                        <li><Link to="/register" className="mr-5 p-2 border rounded border-white">Регистрация</Link>
+                                        <li><Link to="/register" className="mr-5">Регистрация</Link>
                                         </li>
-                                        <li><Link to="/login" className="p-2 border rounded border-white">Войти</Link></li>
+                                        <li><Link to="/login" className="">Войти</Link></li>
                                     </>
                                 ) : (
                                     <>
