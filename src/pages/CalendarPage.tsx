@@ -330,7 +330,7 @@ export const CalendarPage: React.FC = () => {
                 onMonthChange={handleMonthChange}
             />
 
-            <div className="mb-8">
+            <div className="mb-8 max-w-7xl mx-auto">
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="text-xl font-semibold">Ссылки для общего доступа</h2>
                     <button
@@ -346,7 +346,7 @@ export const CalendarPage: React.FC = () => {
                         Нет активных ссылок для общего доступа
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-7xl mx-auto">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {shareLinks.map(shareLink => (
                             <div key={shareLink.id} className="border border-gray-200 rounded-lg p-4">
                                 <div className="flex justify-between items-start mb-2">

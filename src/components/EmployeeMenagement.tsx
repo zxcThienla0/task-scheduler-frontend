@@ -53,7 +53,7 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({
                         <span>{employee.name}</span>
                         <button
                             onClick={() => onDeleteEmployee(employee.id)}
-                            className="text-red-600 hover:text-red-800 border border-red-600 px-3 py-2 rounded hover:bg-red-300 transition-all duration-150"
+                            className="text-red-600 hover:text-red-800 border border-red-600 px-3 py-2 rounded hover:bg-red-200 transition-all duration-300"
                         >
                             Удалить
                         </button>
