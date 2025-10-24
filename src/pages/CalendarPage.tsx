@@ -255,7 +255,7 @@ export const CalendarPage: React.FC = () => {
 
     return (
         <div className="p-3 mx-auto">
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex justify-between items-center mb-6 max-w-7xl mx-auto">
                 <div>
                     <h1 className="text-2xl font-bold">{calendar.name}</h1>
                     {calendar.description && (
@@ -346,7 +346,7 @@ export const CalendarPage: React.FC = () => {
                         Нет активных ссылок для общего доступа
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-7xl mx-auto">
                         {shareLinks.map(shareLink => (
                             <div key={shareLink.id} className="border border-gray-200 rounded-lg p-4">
                                 <div className="flex justify-between items-start mb-2">
