@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import html2canvas from 'html2canvas';
 
 interface Employee {
     id: string;
@@ -14,7 +13,6 @@ interface Shift {
 }
 
 interface ExportMenuProps {
-    tableElement: HTMLElement | null;
     employees: Employee[];
     shifts: Shift[];
     calendarName: string;
@@ -23,7 +21,6 @@ interface ExportMenuProps {
 }
 
 export const ExportMenu: React.FC<ExportMenuProps> = ({
-                                                          tableElement,
                                                           employees,
                                                           shifts,
                                                           calendarName,
@@ -33,77 +30,15 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
     const [isOpen, setIsOpen] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
 
-    const exportToImage = async () => {
-        if (!tableElement) {
-            alert('Таблица не найдена');
-            return;
-        }
-
-        if (isExporting) return;
-
-        setIsExporting(true);
-        try {
-            const monthName = currentMonth.toLocaleDateString('ru-RU', {
-                month: 'long',
-                year: 'numeric'
-            });
-
-            const originalStyles = {
-                overflow: tableElement.style.overflow,
-                transform: tableElement.style.transform,
-                transformOrigin: tableElement.style.transformOrigin,
-                background: tableElement.style.background,
-            };
-
-            tableElement.style.overflow = 'visible';
-            tableElement.style.transform = 'scale(1)';
-            tableElement.style.transformOrigin = 'top left';
-            tableElement.style.background = '#ffffff';
-
-            await new Promise(resolve => setTimeout(resolve, 100));
-
-            const canvas = await html2canvas(tableElement, {
-                scale: 0.8,
-                useCORS: true,
-                logging: false,
-                backgroundColor: '#ffffff',
-                removeContainer: true,
-                width: tableElement.scrollWidth,
-                height: tableElement.scrollHeight,
-                onclone: (clonedDoc) => {
-                    const clonedTable = clonedDoc.querySelector('table');
-                    if (clonedTable) {
-                        clonedTable.style.overflow = 'visible';
-                        clonedTable.style.transform = 'scale(1)';
-                        clonedTable.style.background = '#ffffff';
-                    }
-                }
-            });
-
-            Object.assign(tableElement.style, originalStyles);
-
-            const link = document.createElement('a');
-            link.download = `${calendarName}_${monthName.replace(' ', '_')}.png`;
-            link.href = canvas.toDataURL('image/png');
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-
-            setIsOpen(false);
-        } catch (error: any) {
-            console.error('Ошибка при экспорте изображения:', error);
-            alert('Ошибка при экспорте изображения. Попробуйте уменьшить масштаб страницы или подождать.');
-        } finally {
-            setIsExporting(false);
-        }
-    };
-
     const exportAsPrintableTable = () => {
         if (employees.length === 0) {
             alert('Нет данных для экспорта');
             return;
         }
 
+        if (isExporting) return;
+
+        setIsExporting(true);
         try {
             const monthName = currentMonth.toLocaleDateString('ru-RU', {
                 month: 'long',
@@ -139,10 +74,11 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
             border-collapse: collapse; 
             width: 100%; 
             font-size: 12px;
+            margin-bottom: 20px;
         }
         th, td { 
             border: 1px solid #ddd; 
-            padding: 6px; 
+            padding: 8px; 
             text-align: center; 
         }
         th { 
@@ -150,15 +86,14 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
             font-weight: bold; 
             position: sticky;
             left: 0;
-            z-index: 10;
         }
         .employee-name { 
             background-color: white; 
             font-weight: bold; 
             position: sticky;
             left: 0;
-            z-index: 10;
             min-width: 120px;
+            text-align: left;
         }
         .weekend { 
             background-color: #e6f3ff; 
@@ -169,25 +104,49 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
         .shift-leave { background-color: #ffcdd2; }
         .shift-not-working { background-color: #f5f5f5; }
         .legend { 
-            margin-top: 20px; 
+            margin-top: 30px; 
             display: flex; 
             flex-wrap: wrap; 
             gap: 15px; 
             justify-content: center;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: #f9f9f9;
         }
         .legend-item { 
             display: flex; 
             align-items: center; 
-            gap: 5px; 
+            gap: 8px; 
         }
         .legend-color { 
             width: 20px; 
             height: 20px; 
-            border: 1px solid #ddd; 
+            border: 1px solid #ccc; 
+            border-radius: 3px;
+        }
+        .legend-text {
+            font-size: 14px;
         }
         @media print {
-            body { margin: 0; }
+            body { margin: 10px; }
             .no-print { display: none; }
+            .legend { 
+                border: 1px solid #000;
+                background: white;
+            }
+        }
+        .instructions {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .instructions h3 {
+            margin: 0 0 10px 0;
+            color: #856404;
         }
     </style>
 </head>
@@ -205,7 +164,7 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
                 const isWeekend = day.getDay() === 0 || day.getDay() === 6;
                 return `
                         <th class="${isWeekend ? 'weekend' : ''}">
-                            <div>${day.getDate()}</div>
+                            <div style="font-weight: bold;">${day.getDate()}</div>
                             <div style="font-size: 10px; color: #666;">${day.toLocaleDateString('ru-RU', {weekday: 'short'})}</div>
                         </th>
                     `;
@@ -226,32 +185,38 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
 
                 let shiftClass = '';
                 let shiftSymbol = '';
+                let shiftTitle = '';
 
                 switch (shiftType) {
                     case 'DAY_SHIFT':
                         shiftClass = 'shift-day';
                         shiftSymbol = 'Д';
+                        shiftTitle = 'Дневная смена';
                         break;
                     case 'NIGHT_SHIFT':
                         shiftClass = 'shift-night';
                         shiftSymbol = 'Н';
+                        shiftTitle = 'Ночная смена';
                         break;
                     case 'HOLIDAY':
                         shiftClass = 'shift-holiday';
                         shiftSymbol = 'С';
+                        shiftTitle = 'Суточная смена';
                         break;
                     case 'LEAVE':
                         shiftClass = 'shift-leave';
                         shiftSymbol = 'О';
+                        shiftTitle = 'Отпуск/Больничный';
                         break;
                     default:
                         shiftClass = 'shift-not-working';
                         shiftSymbol = '-';
+                        shiftTitle = 'Не работает';
                 }
 
                 return `
-                            <td class="${shiftClass} ${isWeekend ? 'weekend' : ''}">
-                                ${shiftSymbol}
+                            <td class="${shiftClass} ${isWeekend ? 'weekend' : ''}" title="${employee.name}, ${day.toLocaleDateString()}: ${shiftTitle}">
+                                <strong>${shiftSymbol}</strong>
                             </td>
                         `;
             }).join('')}
@@ -263,48 +228,56 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
     <div class="legend">
         <div class="legend-item">
             <div class="legend-color" style="background-color: #fff9c4;"></div>
-            <span>Д - Дневная смена</span>
+            <span class="legend-text">Д - Дневная смена</span>
         </div>
         <div class="legend-item">
             <div class="legend-color" style="background-color: #bbdefb;"></div>
-            <span>Н - Ночная смена</span>
+            <span class="legend-text">Н - Ночная смена</span>
         </div>
         <div class="legend-item">
             <div class="legend-color" style="background-color: #e1bee7;"></div>
-            <span>С - Суточная смена</span>
+            <span class="legend-text">С - Суточная смена</span>
         </div>
         <div class="legend-item">
             <div class="legend-color" style="background-color: #ffcdd2;"></div>
-            <span>О - Отпуск/Больничный</span>
+            <span class="legend-text">О - Отпуск/Больничный</span>
         </div>
         <div class="legend-item">
             <div class="legend-color" style="background-color: #f5f5f5;"></div>
-            <span>- - Не работает</span>
+            <span class="legend-text">- - Не работает</span>
         </div>
     </div>
 
-    <div class="no-print" style="margin-top: 20px; text-align: center; color: #666;">
-        <p>Для печати: Нажмите Ctrl+P или используйте меню печати браузера</p>
-        <p>Для сохранения как PDF: В диалоге печати выберите "Сохранить как PDF"</p>
+    <div class="instructions no-print">
+        <h3>📄 Инструкция по сохранению</h3>
+        <p><strong>Для печати на принтере:</strong> Нажмите Ctrl+P или используйте меню печати браузера</p>
+        <p><strong>Для сохранения как PDF:</strong> В диалоге печати выберите "Сохранить как PDF" или "Microsoft Print to PDF"</p>
+        <p><strong>Рекомендации:</strong> В настройках печати выберите ориентацию "Альбомная" для лучшего отображения</p>
     </div>
+
+    <script>
+        setTimeout(() => {
+            window.print();
+        }, 1000);
+    </script>
 </body>
 </html>
             `;
 
-            const printWindow = window.open('', '_blank');
+            const printWindow = window.open('', '_blank', 'width=1200,height=800,scrollbars=yes');
             if (printWindow) {
                 printWindow.document.write(htmlContent);
                 printWindow.document.close();
 
-                setTimeout(() => {
-                    printWindow.print();
-                }, 500);
+                printWindow.focus();
             }
 
             setIsOpen(false);
         } catch (error: any) {
             console.error('Ошибка при создании таблицы для печати:', error);
             alert('Ошибка при создании таблицы для печати');
+        } finally {
+            setIsExporting(false);
         }
     };
 
@@ -315,7 +288,7 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
                 disabled={isExporting}
                 className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 flex items-center gap-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
-                {isExporting ? '⏳ Экспорт...' : '📥 Экспорт'}
+                {isExporting ? '⏳ Подготовка...' : '📥 Экспорт'}
                 <span className={`transform transition-transform ${isOpen ? 'rotate-180' : ''}`}>
                     ▼
                 </span>
@@ -329,13 +302,6 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
                             year: 'numeric'
                         })}
                     </div>
-                    <button
-                        onClick={exportToImage}
-                        disabled={isExporting}
-                        className="w-full text-left px-4 py-2 hover:bg-gray-100 border-b border-gray-200 flex items-center gap-2 disabled:opacity-50"
-                    >
-                        🖼️ Изображение (PNG)
-                    </button>
                     <button
                         onClick={exportAsPrintableTable}
                         disabled={isExporting}

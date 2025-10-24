@@ -51,7 +51,6 @@ export const CalendarPage: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [showShareModal, setShowShareModal] = useState(false);
     const [newShareLink, setNewShareLink] = useState<string | null>(null);
-    const [tableRef, setTableRef] = useState<HTMLElement | null>(null);
     const [currentMonthDays, setCurrentMonthDays] = useState<Date[]>([]);
     const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
 
@@ -222,10 +221,6 @@ export const CalendarPage: React.FC = () => {
         });
     };
 
-    const handleTableRef = (ref: HTMLElement | null) => {
-        setTableRef(ref);
-    };
-
     const handleMonthDaysUpdate = (days: Date[]) => {
         setCurrentMonthDays(days);
     };
@@ -269,7 +264,6 @@ export const CalendarPage: React.FC = () => {
                 </div>
                 <div className="flex gap-2">
                     <ExportMenu
-                        tableElement={tableRef}
                         employees={employees}
                         shifts={shifts}
                         calendarName={calendar.name}
@@ -332,7 +326,6 @@ export const CalendarPage: React.FC = () => {
                 employees={employees}
                 shifts={shifts}
                 onShiftChange={handleShiftChange}
-                onTableRef={handleTableRef}
                 onMonthDaysUpdate={handleMonthDaysUpdate}
                 onMonthChange={handleMonthChange}
             />
