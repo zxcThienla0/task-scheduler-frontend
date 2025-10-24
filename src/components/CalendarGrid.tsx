@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useMemo, useRef} from 'react';
+import React, {useState, useEffect, useMemo} from 'react';
 
 interface Employee {
     id: string;
@@ -18,7 +18,6 @@ interface CalendarGridProps {
     shifts: Shift[];
     onShiftChange: (employeeId: string, date: Date, shiftType: string) => void;
     isReadOnly?: boolean;
-    onTableRef?: (ref: HTMLElement | null) => void;
     onMonthDaysUpdate?: (days: Date[]) => void;
     onMonthChange?: (month: Date) => void; // Добавляем новый пропс
 }
@@ -36,14 +35,12 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                                                               shifts,
                                                               onShiftChange,
                                                               isReadOnly = false,
-                                                              onTableRef,
                                                               onMonthDaysUpdate,
-                                                              onMonthChange // Добавляем в деструктуризацию
+                                                              onMonthChange
                                                           }) => {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [sortByAlphabet, setSortByAlphabet] = useState(false);
     const [daysInMonth, setDaysInMonth] = useState<Date[]>([]);
-    const tableRef = useRef<HTMLTableElement>(null);
 
     const sortedEmployees = useMemo(() => {
         if (sortByAlphabet) {
@@ -58,11 +55,6 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
         generateCalendarDays();
     }, [currentDate]);
 
-    useEffect(() => {
-        if (onTableRef && tableRef.current) {
-            onTableRef(tableRef.current);
-        }
-    }, [onTableRef]);
 
     useEffect(() => {
         if (onMonthDaysUpdate) {
@@ -165,7 +157,6 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
 
             <div className="overflow-x-auto">
                 <table
-                    ref={tableRef}
                     className="min-w-full border-collapse select-none"
                 >
                     <thead>
