@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useMemo} from 'react';
+import React, {useState, useEffect, useMemo, useRef} from 'react';
 
 interface Employee {
     id: string;
@@ -18,6 +18,8 @@ interface CalendarGridProps {
     shifts: Shift[];
     onShiftChange: (employeeId: string, date: Date, shiftType: string) => void;
     isReadOnly?: boolean;
+    onTableRef?: (ref: HTMLElement | null) => void;
+    onMonthDaysUpdate?: (days: Date[]) => void;
 }
 
 const SHIFT_TYPES = [
@@ -32,11 +34,14 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                                                               employees,
                                                               shifts,
                                                               onShiftChange,
-                                                              isReadOnly = false
+                                                              isReadOnly = false,
+                                                              onTableRef,
+                                                              onMonthDaysUpdate
                                                           }) => {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [sortByAlphabet, setSortByAlphabet] = useState(false);
     const [daysInMonth, setDaysInMonth] = useState<Date[]>([]);
+    const tableRef = useRef<HTMLTableElement>(null);
 
     const sortedEmployees = useMemo(() => {
         if (sortByAlphabet) {
@@ -50,6 +55,18 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
     useEffect(() => {
         generateCalendarDays();
     }, [currentDate]);
+
+    useEffect(() => {
+        if (onTableRef && tableRef.current) {
+            onTableRef(tableRef.current);
+        }
+    }, [onTableRef, tableRef.current]);
+
+    useEffect(() => {
+        if (onMonthDaysUpdate) {
+            onMonthDaysUpdate(daysInMonth);
+        }
+    }, [daysInMonth, onMonthDaysUpdate]);
 
     const generateCalendarDays = () => {
         const year = currentDate.getFullYear();
@@ -136,7 +153,10 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
             </div>
 
             <div className="overflow-x-auto">
-                <table className="min-w-full border-collapse select-none">
+                <table
+                    ref={tableRef}
+                    className="min-w-full border-collapse select-none"
+                >
                     <thead>
                     <tr>
                         <th

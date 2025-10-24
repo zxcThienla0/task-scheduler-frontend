@@ -6,6 +6,7 @@ import {shiftService} from '../http/shiftService';
 import {shareLinkService} from '../http/shareLinkService';
 import {CalendarGrid} from '../components/CalendarGrid';
 import {EmployeeManagement} from '../components/EmployeeMenagement.tsx';
+import {ExportMenu} from '../components/ExportMenu';
 
 interface Calendar {
     id: string;
@@ -50,6 +51,8 @@ export const CalendarPage: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [showShareModal, setShowShareModal] = useState(false);
     const [newShareLink, setNewShareLink] = useState<string | null>(null);
+    const [tableRef, setTableRef] = useState<HTMLElement | null>(null);
+    const [currentMonthDays, setCurrentMonthDays] = useState<Date[]>([]);
 
     useEffect(() => {
         if (calendarId) {
@@ -116,11 +119,9 @@ export const CalendarPage: React.FC = () => {
 
             await employeeService.deleteEmployee(calendarId, employeeId);
 
-            // Обновляем список сотрудников
             const updatedEmployees = await employeeService.getEmployees(calendarId);
             setEmployees(updatedEmployees || []);
 
-            // Удаляем все смены этого сотрудника
             const updatedShifts = shifts.filter(shift => shift.employeeId !== employeeId);
             setShifts(updatedShifts);
 
@@ -220,6 +221,14 @@ export const CalendarPage: React.FC = () => {
         });
     };
 
+    const handleTableRef = (ref: HTMLElement | null) => {
+        setTableRef(ref);
+    };
+
+    const handleMonthDaysUpdate = (days: Date[]) => {
+        setCurrentMonthDays(days);
+    };
+
     if (isLoading) {
         return (
             <div className="flex justify-center items-center h-32">
@@ -254,9 +263,22 @@ export const CalendarPage: React.FC = () => {
                     )}
                 </div>
                 <div className="flex gap-2">
+                    <ExportMenu
+                        tableElement={tableRef}
+                        employees={employees}
+                        shifts={shifts}
+                        calendarName={calendar.name}
+                        daysInMonth={currentMonthDays}
+                    />
+                    <button
+                        onClick={handleCreateShareLink}
+                        className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"
+                    >
+                        Поделиться
+                    </button>
                     <button
                         onClick={() => navigate('/calendars')}
-                        className="bg-indigo-600 text-white px-4 py-2 rounded"
+                        className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700"
                     >
                         Назад к списку
                     </button>
@@ -304,6 +326,8 @@ export const CalendarPage: React.FC = () => {
                 employees={employees}
                 shifts={shifts}
                 onShiftChange={handleShiftChange}
+                onTableRef={handleTableRef}
+                onMonthDaysUpdate={handleMonthDaysUpdate}
             />
 
             <div className="mb-8">
