@@ -252,7 +252,6 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
         <h3>📄 Инструкция по сохранению</h3>
         <p><strong>Для печати на принтере:</strong> Нажмите Ctrl+P или используйте меню печати браузера</p>
         <p><strong>Для сохранения как PDF:</strong> В диалоге печати выберите "Сохранить как PDF" или "Microsoft Print to PDF"</p>
-        <p><strong>Рекомендации:</strong> В настройках печати выберите ориентацию "Альбомная" для лучшего отображения</p>
     </div>
 
     <script>
@@ -264,7 +263,7 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
 </html>
             `;
 
-            const printWindow = window.open('', '_blank', 'width=1200,height=800,scrollbars=yes');
+            const printWindow = window.open('', '_blank');
             if (printWindow) {
                 printWindow.document.write(htmlContent);
                 printWindow.document.close();
