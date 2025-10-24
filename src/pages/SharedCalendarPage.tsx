@@ -118,8 +118,8 @@ export const SharedCalendarPage: React.FC = () => {
             </div>
 
             <CalendarGrid
-                employees={sharedData.calendar.employees}
-                shifts={sharedData.calendar.shifts}
+                employees={sharedData.calendar.employees || []}
+                shifts={sharedData.calendar.shifts || []}
                 onShiftChange={handleShiftChange}
                 isReadOnly={true}
             />

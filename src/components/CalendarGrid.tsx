@@ -37,14 +37,17 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
     const [currentDate, setCurrentDate] = useState(new Date());
     const [sortByAlphabet, setSortByAlphabet] = useState(false);
     const [daysInMonth, setDaysInMonth] = useState<Date[]>([]);
+    const [sortedEmployees, setSortedEmployees] = useState<Employee[]>([]);
 
-    const sortedEmployees = React.useMemo(() => {
+    useEffect(() => {
         if (sortByAlphabet) {
-            return [...employees].sort((a, b) =>
+            const sorted = [...employees].sort((a, b) =>
                 a.name.localeCompare(b.name, 'ru')
             );
+            setSortedEmployees(sorted);
+        } else {
+            setSortedEmployees(employees);
         }
-        return employees;
     }, [employees, sortByAlphabet]);
 
     useEffect(() => {
