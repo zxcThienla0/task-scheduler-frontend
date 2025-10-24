@@ -28,7 +28,7 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({
     };
 
     return (
-        <div className="mb-8">
+        <div className="mb-8 max-w-7xl mx-auto">
             <h2 className="text-xl font-semibold mb-4">Сотрудники</h2>
 
             <form onSubmit={handleSubmit} className="flex gap-2 mb-4">
@@ -53,7 +53,7 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({
                         <span>{employee.name}</span>
                         <button
                             onClick={() => onDeleteEmployee(employee.id)}
-                            className="text-red-600 hover:text-red-800"
+                            className="text-red-600 hover:text-red-800 border border-red-600 px-3 py-2 rounded hover:text-2xl transition-all duration-150"
                         >
                             Удалить
                         </button>
