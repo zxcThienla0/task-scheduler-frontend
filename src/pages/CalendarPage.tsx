@@ -53,6 +53,7 @@ export const CalendarPage: React.FC = () => {
     const [newShareLink, setNewShareLink] = useState<string | null>(null);
     const [tableRef, setTableRef] = useState<HTMLElement | null>(null);
     const [currentMonthDays, setCurrentMonthDays] = useState<Date[]>([]);
+    const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
 
     useEffect(() => {
         if (calendarId) {
@@ -229,6 +230,10 @@ export const CalendarPage: React.FC = () => {
         setCurrentMonthDays(days);
     };
 
+    const handleMonthChange = (month: Date) => {
+        setCurrentMonth(month);
+    };
+
     if (isLoading) {
         return (
             <div className="flex justify-center items-center h-32">
@@ -269,6 +274,7 @@ export const CalendarPage: React.FC = () => {
                         shifts={shifts}
                         calendarName={calendar.name}
                         daysInMonth={currentMonthDays}
+                        currentMonth={currentMonth}
                     />
                     <button
                         onClick={handleCreateShareLink}
@@ -328,6 +334,7 @@ export const CalendarPage: React.FC = () => {
                 onShiftChange={handleShiftChange}
                 onTableRef={handleTableRef}
                 onMonthDaysUpdate={handleMonthDaysUpdate}
+                onMonthChange={handleMonthChange}
             />
 
             <div className="mb-8">

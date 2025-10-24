@@ -20,6 +20,7 @@ interface CalendarGridProps {
     isReadOnly?: boolean;
     onTableRef?: (ref: HTMLElement | null) => void;
     onMonthDaysUpdate?: (days: Date[]) => void;
+    onMonthChange?: (month: Date) => void; // Добавляем новый пропс
 }
 
 const SHIFT_TYPES = [
@@ -36,7 +37,8 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                                                               onShiftChange,
                                                               isReadOnly = false,
                                                               onTableRef,
-                                                              onMonthDaysUpdate
+                                                              onMonthDaysUpdate,
+                                                              onMonthChange // Добавляем в деструктуризацию
                                                           }) => {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [sortByAlphabet, setSortByAlphabet] = useState(false);
@@ -60,13 +62,20 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
         if (onTableRef && tableRef.current) {
             onTableRef(tableRef.current);
         }
-    }, [onTableRef, tableRef.current]);
+    }, [onTableRef]);
 
     useEffect(() => {
         if (onMonthDaysUpdate) {
             onMonthDaysUpdate(daysInMonth);
         }
     }, [daysInMonth, onMonthDaysUpdate]);
+
+    // Вызываем onMonthChange при изменении месяца
+    useEffect(() => {
+        if (onMonthChange) {
+            onMonthChange(currentDate);
+        }
+    }, [currentDate, onMonthChange]);
 
     const generateCalendarDays = () => {
         const year = currentDate.getFullYear();
@@ -105,11 +114,13 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
     };
 
     const goToPreviousMonth = () => {
-        setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+        const newDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
+        setCurrentDate(newDate);
     };
 
     const goToNextMonth = () => {
-        setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+        const newDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
+        setCurrentDate(newDate);
     };
 
     if (employees.length === 0) {
