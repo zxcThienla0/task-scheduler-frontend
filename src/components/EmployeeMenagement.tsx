@@ -47,7 +47,7 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({
                 </button>
             </form>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                 {employees.map(employee => (
                     <div
                         key={employee.id}
