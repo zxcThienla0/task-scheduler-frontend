@@ -156,20 +156,18 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
             </div>
 
             <div className="overflow-x-auto">
-                <table
-                    className="min-w-full border-collapse select-none"
-                >
+                <table className="min-w-full border-collapse select-none">
                     <thead>
                     <tr>
                         <th
                             className={`
-                                border border-gray-300 p-2 min-w-24 mr-1 sticky left-0 z-10 
-                                select-none cursor-pointer transition-colors
-                                ${sortByAlphabet
+                        border border-gray-300 p-2 min-w-24 mr-1 sticky left-0 z-10 
+                        select-none cursor-pointer transition-colors
+                        ${sortByAlphabet
                                 ? 'bg-blue-50 border-blue-300 hover:bg-blue-100'
                                 : 'bg-white hover:bg-gray-100'
                             }
-                            `}
+                    `}
                             onClick={handleEmployeeHeaderClick}
                             title={sortByAlphabet
                                 ? "Нажмите чтобы отключить сортировку по алфавиту"
@@ -179,9 +177,9 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                             <div className="flex items-center justify-between">
                                 <span className="font-medium">Сотрудник</span>
                                 <div className="flex flex-col ml-1">
-                                    <span className={`text-xs ${sortByAlphabet ? 'text-blue-500' : 'text-gray-400'}`}>
-                                        {sortByAlphabet ? '↓' : '↕'}
-                                    </span>
+                            <span className={`text-xs ${sortByAlphabet ? 'text-blue-500' : 'text-gray-400'}`}>
+                                {sortByAlphabet ? '↓' : '↕'}
+                            </span>
                                 </div>
                             </div>
                         </th>
@@ -208,53 +206,87 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                     </thead>
 
                     <tbody>
-                    {sortedEmployees.map(employee => (
-                        <tr key={employee.id}>
-                            <td className={`
+                    {sortedEmployees.map((employee, employeeIndex) => (
+                        <React.Fragment key={employee.id}>
+                            <tr>
+                                <td className={`
+                            border border-gray-300 p-2 font-medium sticky left-0 z-10 
+                            select-none
+                            ${sortByAlphabet ? 'bg-blue-50' : 'bg-white'}
+                        `}>
+                                    {employee.name}
+                                </td>
+
+                                {daysInMonth.map(day => {
+                                    const shift = getShiftForEmployee(employee.id, day);
+                                    const shiftType = SHIFT_TYPES.find(
+                                        type => type.value === (shift?.shiftType || 'NOT_WORKING')
+                                    ) || SHIFT_TYPES[0];
+
+                                    const isWeekend = day.getDay() === 0 || day.getDay() === 6;
+
+                                    return (
+                                        <td
+                                            key={day.toISOString()}
+                                            className={`border border-gray-300 p-1 text-center select-none ${
+                                                isReadOnly
+                                                    ? 'cursor-not-allowed opacity-90'
+                                                    : 'cursor-pointer hover:opacity-80 hover:shadow-md'
+                                            } ${
+                                                isWeekend ? 'bg-blue-100' : 'bg-white'
+                                            }`}
+                                            onClick={() => handleShiftClick(
+                                                employee.id,
+                                                day,
+                                                shift?.shiftType || 'NOT_WORKING'
+                                            )}
+                                            title={isReadOnly
+                                                ? `${employee.name}, ${day.toLocaleDateString()}: ${shiftType.title} (только просмотр)`
+                                                : `${employee.name}, ${day.toLocaleDateString()}: ${shiftType.title}`
+                                            }
+                                        >
+                                            <div className={`${shiftType.color} rounded p-2 text-lg select-none ${
+                                                isReadOnly ? '' : ''
+                                            }`}>
+                                                {shiftType.label}
+                                            </div>
+                                        </td>
+                                    );
+                                })}
+                            </tr>
+
+                            {/* Дублируем заголовки дней через каждые 10 сотрудников */}
+                            {(employeeIndex + 1) % 10 === 0 && employeeIndex !== sortedEmployees.length - 1 && (
+                                <tr>
+                                    <td className={`
                                 border border-gray-300 p-2 font-medium sticky left-0 z-10 
-                                select-none
-                                ${sortByAlphabet ? 'bg-blue-50' : 'bg-white'}
+                                select-none bg-gray-100
+                                ${sortByAlphabet ? 'bg-blue-50' : 'bg-gray-100'}
                             `}>
-                                {employee.name}
-                            </td>
-
-                            {daysInMonth.map(day => {
-                                const shift = getShiftForEmployee(employee.id, day);
-                                const shiftType = SHIFT_TYPES.find(
-                                    type => type.value === (shift?.shiftType || 'NOT_WORKING')
-                                ) || SHIFT_TYPES[0];
-
-                                const isWeekend = day.getDay() === 0 || day.getDay() === 6;
-
-                                return (
-                                    <td
-                                        key={day.toISOString()}
-                                        className={`border border-gray-300 p-1 text-center select-none ${
-                                            isReadOnly
-                                                ? 'cursor-not-allowed opacity-90'
-                                                : 'cursor-pointer hover:opacity-80 hover:shadow-md'
-                                        } ${
-                                            isWeekend ? 'bg-blue-100' : 'bg-white'
-                                        }`}
-                                        onClick={() => handleShiftClick(
-                                            employee.id,
-                                            day,
-                                            shift?.shiftType || 'NOT_WORKING'
-                                        )}
-                                        title={isReadOnly
-                                            ? `${employee.name}, ${day.toLocaleDateString()}: ${shiftType.title} (только просмотр)`
-                                            : `${employee.name}, ${day.toLocaleDateString()}: ${shiftType.title}`
-                                        }
-                                    >
-                                        <div className={`${shiftType.color} rounded p-2 text-lg select-none ${
-                                            isReadOnly ? '' : ''
-                                        }`}>
-                                            {shiftType.label}
-                                        </div>
+                                        <div className="text-sm text-gray-600">Сотрудник</div>
                                     </td>
-                                );
-                            })}
-                        </tr>
+                                    {daysInMonth.map(day => {
+                                        const isWeekend = day.getDay() === 0 || day.getDay() === 6;
+
+                                        return (
+                                            <th
+                                                key={`duplicate-${day.toISOString()}`}
+                                                className={`border border-gray-300 p-2 text-center min-w-12 select-none ${
+                                                    isWeekend ? 'bg-blue-100' : 'bg-gray-100'
+                                                }`}
+                                            >
+                                                <div className="text-sm font-medium select-none">
+                                                    {day.getDate()}
+                                                </div>
+                                                <div className="text-xs text-gray-500 select-none">
+                                                    {day.toLocaleDateString('ru-RU', {weekday: 'short'})}
+                                                </div>
+                                            </th>
+                                        );
+                                    })}
+                                </tr>
+                            )}
+                        </React.Fragment>
                     ))}
                     </tbody>
                 </table>
