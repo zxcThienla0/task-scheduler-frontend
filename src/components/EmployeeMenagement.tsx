@@ -47,19 +47,28 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({
                 </button>
             </form>
 
-            <div className="space-y-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {employees.map(employee => (
-                    <div key={employee.id} className="flex justify-between items-center border-b pb-2">
-                        <span>{employee.name}</span>
+                    <div
+                        key={employee.id}
+                        className="flex justify-between items-center border border-gray-300 rounded-lg p-3 bg-white shadow-sm hover:shadow-md transition-shadow"
+                    >
+                        <span className="font-medium text-gray-800">{employee.name}</span>
                         <button
                             onClick={() => onDeleteEmployee(employee.id)}
-                            className="text-red-600 hover:text-red-800 border border-red-600 px-3 py-2 rounded hover:bg-red-200 transition-all duration-300"
+                            className="text-red-600 hover:text-red-800 border border-red-600 px-3 py-1 rounded hover:bg-red-50 transition-all duration-200 text-sm"
                         >
                             Удалить
                         </button>
                     </div>
                 ))}
             </div>
+
+            {employees.length === 0 && (
+                <div className="text-center text-gray-500 py-8 border-2 border-dashed border-gray-300 rounded-lg">
+                    Нет сотрудников. Добавьте первого сотрудника.
+                </div>
+            )}
         </div>
     );
 };
