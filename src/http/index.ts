@@ -1,8 +1,10 @@
 import axios from 'axios';
 
+const API_URL = 'https://akella24calendar.ru/api';
+
 const $api = axios.create({
     withCredentials: true,
-    baseURL: '/api'
+    baseURL: API_URL
 });
 
 $api.interceptors.request.use((config) => {
