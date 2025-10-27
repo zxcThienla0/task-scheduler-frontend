@@ -1,73 +1,133 @@
-# React + TypeScript + Vite
+🗓️ Akella24 Calendar - Frontend
+<div align="center">
+https://img.shields.io/badge/React-19.1.1-61DAFB?style=for-the-badge&logo=react
+https://img.shields.io/badge/TypeScript-5.9.3-3178C6?style=for-the-badge&logo=typescript
+https://img.shields.io/badge/Vite-7.1.7-646CFF?style=for-the-badge&logo=vite
+https://img.shields.io/badge/Tailwind-4.1.14-06B6D4?style=for-the-badge&logo=tailwindcss
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Производственный сайт: akella24calendar.ru
 
-Currently, two official plugins are available:
+</div>
+📋 О проекте
+Frontend-часть коммерческого проекта Akella24 Calendar, разработанная на современном стеке технологий. Приложение предоставляет функционал календаря и управления событиями.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+🚀 Технологический стек
+Основные технологии
+React 19.1.1 - UI библиотека
 
-## React Compiler
+TypeScript - статическая типизация
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Vite 7.1.7 - сборка и разработка
 
-## Expanding the ESLint configuration
+Tailwind CSS 4.1.14 - стилизация
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+State Management & Routing
+Zustand 5.0.8 - управление состоянием
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+React Router DOM 7.9.4 - маршрутизация
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+HTTP Client
+Axios 1.12.2 - HTTP запросы к backend API
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+Development Tools
+ESLint - линтинг кода
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+TypeScript ESLint - линтинг TypeScript
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+📁 Структура проекта
+text
+src/
+├── components/          # React компоненты
+│   ├── ui/             # Переиспользуемые UI компоненты
+│   ├── calendar/        # Компоненты календаря
+│   └── common/          # Общие компоненты
+├── pages/               # Страницы приложения
+├── stores/              # Zustand stores
+├── services/            # API сервисы
+├── types/               # TypeScript типы
+├── utils/               # Вспомогательные функции
+├── hooks/               # Кастомные React хуки
+└── assets/              # Статические файлы
+🛠 Установка и запуск
+Предварительные требования
+Node.js 18+
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+npm или yarn
+
+Установка зависимостей
+bash
+npm install
+Запуск в режиме разработки
+bash
+npm run dev
+Приложение будет доступно по адресу: http://localhost:5173
+
+Сборка для production
+bash
+npm run build
+Просмотр собранной версии
+bash
+npm run preview
+Линтинг кода
+bash
+npm run lint
+🔗 Интеграция с Backend
+Проект взаимодействует с отдельным backend-сервером, расположенным в другом репозитории. Основные особенности интеграции:
+
+REST API через Axios
+
+JWT аутентификация (предположительно)
+
+Обработка ошибок и загрузки данных
+
+Интерсепторы для автоматической обработки запросов
+
+🌐 Деплой
+Проект размещен в интернете под доменом akella24calendar.ru и используется в коммерческих целях.
+
+Скрипты деплоя
+npm run build - создает оптимизированную сборку
+
+npm run preview - локальная проверка production сборки
+
+🎯 Ключевые функции
+На основе используемого стека можно предположить реализацию:
+
+📅 Управление календарем - просмотр, создание, редактирование событий
+
+🔐 Аутентификация и авторизация пользователей
+
+📱 Адаптивный дизайн для разных устройств
+
+⚡ Быстрая загрузка благодаря Vite и оптимизациям
+
+🎨 Современный UI с Tailwind CSS
+
+🔄 State management через Zustand для предсказуемого состояния
+
+🛣 Клиентская маршрутизация через React Router
+
+🤝 Разработка
+Code Style
+TypeScript с строгими настройками
+
+ESLint для поддержания качества кода
+
+Функциональные компоненты с хуками
+
+Рекомендации по разработке
+Используйте TypeScript для типизации пропсов и состояний
+
+Следуйте принципам компонентного подхода
+
+Используйте кастомные хуки для переиспользуемой логики
+
+Делите компоненты на умные и глупые (presentational)
+
+📞 Контакты
+Для вопросов по frontend части проекта обращайтесь к разработчику или через Issues в репозитории.
+
+<div align="center">
+Production: akella24calendar.ru | Built with ❤️ using React & TypeScript
+
+</div>
