@@ -211,20 +211,20 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
                         shiftSymbol = 'О';
                         shiftTitle = 'Отпуск/Больничный';
                         break;
-                    case 'Dentist_Day':
+                    case 'DENTIST_DAY':
                         shiftClass = 'Dentist_Day';
                         shiftSymbol = 'СД';
-                        shiftTitle = 'Отпуск/Больничный';
+                        shiftTitle = 'Стоматологический день';
                         break;
-                    case 'Surgery_Day':
+                    case 'SURGERY_DAY':
                         shiftClass = 'Surgery_Day';
                         shiftSymbol = 'ХД';
-                        shiftTitle = 'Отпуск/Больничный';
+                        shiftTitle = 'Хирургический день';
                         break;
-                    case 'Computed_Tomography':
+                    case 'COMPUTED_TOMOGRAPHY':
                         shiftClass = 'Computed_Tomography';
                         shiftSymbol = 'КТ';
-                        shiftTitle = 'Отпуск/Больничный';
+                        shiftTitle = 'Компьютерная томография';
                         break;
                     default:
                         shiftClass = 'shift-not-working';
