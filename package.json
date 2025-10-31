@@ -1,5 +1,7 @@
 {
   "name": "client",
+  "homepage": ".",
+  "build": "react-scripts build",
   "private": true,
   "version": "0.0.0",
   "type": "module",
