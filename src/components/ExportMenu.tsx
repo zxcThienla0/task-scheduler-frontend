@@ -264,6 +264,18 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
             <div class="legend-color" style="background-color: #f5f5f5;"></div>
             <span class="legend-text">- - Не работает</span>
         </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background-color: #ffffff;"></div>
+            <span class="legend-text">СД - Стоматологический день</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background-color: #6cccff;"></div>
+            <span class="legend-text">ХД - Хирургический день</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background-color: #d8d8d8;"></div>
+            <span class="legend-text">КТ - Компьютерная томография</span>
+        </div>
     </div>
 
     <div class="instructions no-print">
