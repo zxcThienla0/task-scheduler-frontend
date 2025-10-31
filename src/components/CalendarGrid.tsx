@@ -19,7 +19,7 @@ interface CalendarGridProps {
     onShiftChange: (employeeId: string, date: Date, shiftType: string) => void;
     isReadOnly?: boolean;
     onMonthDaysUpdate?: (days: Date[]) => void;
-    onMonthChange?: (month: Date) => void; // Добавляем новый пропс
+    onMonthChange?: (month: Date) => void;
 }
 
 const SHIFT_TYPES = [
