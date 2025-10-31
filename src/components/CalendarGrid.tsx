@@ -28,6 +28,9 @@ const SHIFT_TYPES = [
     {value: 'NIGHT_SHIFT', label: '🌙', color: 'bg-blue-300', title: 'Ночная смена'},
     {value: 'HOLIDAY', label: '🌍', color: 'bg-purple-200', title: 'Суточная смена'},
     {value: 'LEAVE', label: '🏥', color: 'bg-red-200', title: 'Больничный/Отпуск'},
+    {value: 'Dentist_Day', label: '🦷', color: 'bg-white', title: 'Стоматологический день'},
+    {value: 'Surgery_Day', label: '🪡', color: 'bg-blue-200', title: 'Хирургический день'},
+    {value: 'Computed_Tomography', label: '🖥', color: 'bg-gray-300', title: 'Компьютерная томография'},
 ];
 
 export const CalendarGrid: React.FC<CalendarGridProps> = ({
@@ -62,7 +65,6 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
         }
     }, [daysInMonth, onMonthDaysUpdate]);
 
-    // Вызываем onMonthChange при изменении месяца
     useEffect(() => {
         if (onMonthChange) {
             onMonthChange(currentDate);
@@ -255,7 +257,6 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                                 })}
                             </tr>
 
-                            {/* Дублируем заголовки дней через каждые 10 сотрудников */}
                             {(employeeIndex + 1) % 10 === 0 && employeeIndex !== sortedEmployees.length - 1 && (
                                 <tr>
                                     <td className={`

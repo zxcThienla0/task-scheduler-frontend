@@ -103,6 +103,9 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
         .shift-holiday { background-color: #e1bee7; }
         .shift-leave { background-color: #ffcdd2; }
         .shift-not-working { background-color: #f5f5f5; }
+        .Dentist_Day { background-color: #ffffff; }
+        .Surgery_Day { background-color: #6cccff; }
+        .Computed_Tomography { background-color: #d8d8d8; }
         .legend { 
             margin-top: 30px; 
             display: flex; 
@@ -206,6 +209,21 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
                     case 'LEAVE':
                         shiftClass = 'shift-leave';
                         shiftSymbol = 'О';
+                        shiftTitle = 'Отпуск/Больничный';
+                        break;
+                    case 'Dentist_Day':
+                        shiftClass = 'Dentist_Day';
+                        shiftSymbol = 'СД';
+                        shiftTitle = 'Отпуск/Больничный';
+                        break;
+                    case 'Surgery_Day':
+                        shiftClass = 'Surgery_Day';
+                        shiftSymbol = 'ХД';
+                        shiftTitle = 'Отпуск/Больничный';
+                        break;
+                    case 'Computed_Tomography':
+                        shiftClass = 'Computed_Tomography';
+                        shiftSymbol = 'КТ';
                         shiftTitle = 'Отпуск/Больничный';
                         break;
                     default:
