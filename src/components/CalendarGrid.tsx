@@ -28,9 +28,9 @@ const SHIFT_TYPES = [
     {value: 'NIGHT_SHIFT', label: '🌙', color: 'bg-blue-300', title: 'Ночная смена'},
     {value: 'HOLIDAY', label: '🌍', color: 'bg-purple-200', title: 'Суточная смена'},
     {value: 'LEAVE', label: '🏥', color: 'bg-red-200', title: 'Больничный/Отпуск'},
-    {value: 'Dentist_Day', label: '🦷', color: 'bg-white', title: 'Стоматологический день'},
-    {value: 'Surgery_Day', label: '🪡', color: 'bg-blue-200', title: 'Хирургический день'},
-    {value: 'Computed_Tomography', label: '🖥', color: 'bg-gray-300', title: 'Компьютерная томография'},
+    {value: 'DENTIST_DAY', label: '🦷', color: 'bg-white', title: 'Стоматологический день'},
+    {value: 'SURGERY_DAY', label: '🪡', color: 'bg-blue-200', title: 'Хирургический день'},
+    {value: 'COMPUTED_TOMOGRAPHY', label: '🖥', color: 'bg-gray-300', title: 'Компьютерная томография'},
 ];
 
 export const CalendarGrid: React.FC<CalendarGridProps> = ({
