@@ -44,20 +44,34 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
     const [currentDate, setCurrentDate] = useState(new Date());
     const [sortByAlphabet, setSortByAlphabet] = useState(false);
     const [daysInMonth, setDaysInMonth] = useState<Date[]>([]);
+    const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
+    const [manualOrder, setManualOrder] = useState<string[]>([]);
+
+    // Инициализируем ручной порядок при загрузке сотрудников
+    useEffect(() => {
+        if (employees.length > 0 && manualOrder.length === 0) {
+            setManualOrder(employees.map(emp => emp.id));
+        }
+    }, [employees, manualOrder.length]);
 
     const sortedEmployees = useMemo(() => {
         if (sortByAlphabet) {
             return [...employees].sort((a, b) =>
                 a.name.localeCompare(b.name, 'ru')
             );
+        } else if (manualOrder.length > 0) {
+            // Сортируем по ручному порядку
+            const employeeMap = new Map(employees.map(emp => [emp.id, emp]));
+            return manualOrder
+                .map(id => employeeMap.get(id))
+                .filter((emp): emp is Employee => emp !== undefined);
         }
         return employees;
-    }, [employees, sortByAlphabet]);
+    }, [employees, sortByAlphabet, manualOrder]);
 
     useEffect(() => {
         generateCalendarDays();
     }, [currentDate]);
-
 
     useEffect(() => {
         if (onMonthDaysUpdate) {
@@ -93,6 +107,39 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
 
     const handleEmployeeHeaderClick = () => {
         setSortByAlphabet(prev => !prev);
+        setSelectedEmployeeId(null); // Сбрасываем выделение при переключении сортировки
+    };
+
+    const handleEmployeeClick = (employeeId: string) => {
+        if (sortByAlphabet) return; // Не позволяем выбирать при алфавитной сортировке
+
+        setSelectedEmployeeId(prev =>
+            prev === employeeId ? null : employeeId
+        );
+    };
+
+    const moveEmployeeUp = () => {
+        if (!selectedEmployeeId || sortByAlphabet) return;
+
+        const currentIndex = manualOrder.indexOf(selectedEmployeeId);
+        if (currentIndex > 0) {
+            const newOrder = [...manualOrder];
+            [newOrder[currentIndex - 1], newOrder[currentIndex]] =
+                [newOrder[currentIndex], newOrder[currentIndex - 1]];
+            setManualOrder(newOrder);
+        }
+    };
+
+    const moveEmployeeDown = () => {
+        if (!selectedEmployeeId || sortByAlphabet) return;
+
+        const currentIndex = manualOrder.indexOf(selectedEmployeeId);
+        if (currentIndex < manualOrder.length - 1) {
+            const newOrder = [...manualOrder];
+            [newOrder[currentIndex], newOrder[currentIndex + 1]] =
+                [newOrder[currentIndex + 1], newOrder[currentIndex]];
+            setManualOrder(newOrder);
+        }
     };
 
     const handleShiftClick = (employeeId: string, date: Date, currentShiftType: string) => {
@@ -126,7 +173,61 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
     }
 
     return (
-        <div className="select-none mb-3 ">
+        <div className="select-none mb-3">
+            {/* Панель управления сортировкой */}
+            <div className="flex justify-between items-center mb-4 p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-4">
+                    <button
+                        onClick={handleEmployeeHeaderClick}
+                        className={`px-4 py-2 rounded transition-colors ${
+                            sortByAlphabet
+                                ? 'bg-blue-500 text-white'
+                                : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                        }`}
+                        title={sortByAlphabet
+                            ? "Нажмите чтобы отключить сортировку по алфавиту"
+                            : "Нажмите чтобы включить сортировку по алфавиту"
+                        }
+                    >
+                        {sortByAlphabet ? 'Сортировка по алфавиту' : 'Ручная сортировка'}
+                    </button>
+
+                    {!sortByAlphabet && selectedEmployeeId && (
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm text-gray-600">
+                                Выбран: {employees.find(e => e.id === selectedEmployeeId)?.name}
+                            </span>
+                            <button
+                                onClick={moveEmployeeUp}
+                                className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                                disabled={!selectedEmployeeId || manualOrder.indexOf(selectedEmployeeId) === 0}
+                                title="Переместить вверх"
+                            >
+                                ↑
+                            </button>
+                            <button
+                                onClick={moveEmployeeDown}
+                                className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                                disabled={!selectedEmployeeId || manualOrder.indexOf(selectedEmployeeId) === manualOrder.length - 1}
+                                title="Переместить вниз"
+                            >
+                                ↓
+                            </button>
+                        </div>
+                    )}
+                </div>
+
+                {!sortByAlphabet && (
+                    <div className="text-sm text-gray-500">
+                        {selectedEmployeeId
+                            ? "Кликните на сотрудника для выбора, затем используйте стрелки"
+                            : "Кликните на сотрудника чтобы выбрать для перемещения"
+                        }
+                    </div>
+                )}
+            </div>
+
+            {/* Остальная часть компонента остается такой же, но с небольшими изменениями в отображении сотрудников */}
             <div className="flex justify-between items-center mb-6">
                 <button
                     onClick={goToPreviousMonth}
@@ -151,7 +252,7 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
 
                 <button
                     onClick={goToNextMonth}
-                    className="bg-white border-black border-1 text-1xl text-black px-4 py-2 rounded transition-colors select-none "
+                    className="bg-white border-black border-1 text-1xl text-black px-4 py-2 rounded transition-colors select-none"
                 >
                     →
                 </button>
@@ -163,13 +264,13 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                     <tr>
                         <th
                             className={`
-                        border border-gray-300 p-2 min-w-24 mr-1 sticky left-0 z-10 
-                        select-none cursor-pointer transition-colors
-                        ${sortByAlphabet
+                                border border-gray-300 p-2 min-w-24 mr-1 sticky left-0 z-10 
+                                select-none cursor-pointer transition-colors
+                                ${sortByAlphabet
                                 ? 'bg-blue-50 border-blue-300 hover:bg-blue-100'
                                 : 'bg-white hover:bg-gray-100'
                             }
-                    `}
+                            `}
                             onClick={handleEmployeeHeaderClick}
                             title={sortByAlphabet
                                 ? "Нажмите чтобы отключить сортировку по алфавиту"
@@ -179,9 +280,9 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                             <div className="flex items-center justify-between">
                                 <span className="font-medium">Сотрудник</span>
                                 <div className="flex flex-col ml-1">
-                            <span className={`text-xs ${sortByAlphabet ? 'text-blue-500' : 'text-gray-400'}`}>
-                                {sortByAlphabet ? '↓' : '↕'}
-                            </span>
+                                    <span className={`text-xs ${sortByAlphabet ? 'text-blue-500' : 'text-gray-400'}`}>
+                                        {sortByAlphabet ? '↓' : '↕'}
+                                    </span>
                                 </div>
                             </div>
                         </th>
@@ -208,87 +309,110 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                     </thead>
 
                     <tbody>
-                    {sortedEmployees.map((employee, employeeIndex) => (
-                        <React.Fragment key={employee.id}>
-                            <tr>
-                                <td className={`
-                            border border-gray-300 p-2 font-medium sticky left-0 z-10 
-                            select-none
-                            ${sortByAlphabet ? 'bg-blue-50' : 'bg-white'}
-                        `}>
-                                    {employee.name}
-                                </td>
+                    {sortedEmployees.map((employee, employeeIndex) => {
+                        const isSelected = selectedEmployeeId === employee.id;
+                        const isSelectable = !sortByAlphabet;
 
-                                {daysInMonth.map(day => {
-                                    const shift = getShiftForEmployee(employee.id, day);
-                                    const shiftType = SHIFT_TYPES.find(
-                                        type => type.value === (shift?.shiftType || 'NOT_WORKING')
-                                    ) || SHIFT_TYPES[0];
-
-                                    const isWeekend = day.getDay() === 0 || day.getDay() === 6;
-
-                                    return (
-                                        <td
-                                            key={day.toISOString()}
-                                            className={`border border-gray-300 p-1 text-center select-none ${
-                                                isReadOnly
-                                                    ? 'cursor-not-allowed opacity-90'
-                                                    : 'cursor-pointer hover:opacity-80 hover:shadow-md'
-                                            } ${
-                                                isWeekend ? 'bg-blue-100' : 'bg-white'
-                                            }`}
-                                            onClick={() => handleShiftClick(
-                                                employee.id,
-                                                day,
-                                                shift?.shiftType || 'NOT_WORKING'
-                                            )}
-                                            title={isReadOnly
-                                                ? `${employee.name}, ${day.toLocaleDateString()}: ${shiftType.title} (только просмотр)`
-                                                : `${employee.name}, ${day.toLocaleDateString()}: ${shiftType.title}`
-                                            }
-                                        >
-                                            <div className={`${shiftType.color} rounded p-2 text-lg select-none ${
-                                                isReadOnly ? '' : ''
-                                            }`}>
-                                                {shiftType.label}
-                                            </div>
-                                        </td>
-                                    );
-                                })}
-                            </tr>
-
-                            {(employeeIndex + 1) % 10 === 0 && employeeIndex !== sortedEmployees.length - 1 && (
+                        return (
+                            <React.Fragment key={employee.id}>
                                 <tr>
-                                    <td className={`
-                                border border-gray-300 p-2 font-medium sticky left-0 z-10 
-                                select-none bg-gray-100
-                                ${sortByAlphabet ? 'bg-blue-50' : 'bg-gray-100'}
-                            `}>
-                                        <div className="text-sm text-gray-600">Сотрудник</div>
+                                    <td
+                                        className={`
+                                            border border-gray-300 p-2 font-medium sticky left-0 z-10 
+                                            select-none transition-all
+                                            ${isSelected
+                                            ? 'bg-blue-200 border-blue-400 shadow-inner'
+                                            : sortByAlphabet
+                                                ? 'bg-blue-50'
+                                                : 'bg-white hover:bg-gray-50'
+                                        }
+                                            ${isSelectable ? 'cursor-pointer' : 'cursor-default'}
+                                        `}
+                                        onClick={() => isSelectable && handleEmployeeClick(employee.id)}
+                                        title={isSelectable
+                                            ? isSelected
+                                                ? "Сотрудник выбран. Используйте кнопки для перемещения"
+                                                : "Кликните чтобы выбрать сотрудника для перемещения"
+                                            : "Переключитесь на ручную сортировку для выбора сотрудников"
+                                        }
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <span>{employee.name}</span>
+                                            {isSelected && (
+                                                <span className="text-blue-600 text-sm">✓</span>
+                                            )}
+                                        </div>
                                     </td>
+
                                     {daysInMonth.map(day => {
+                                        const shift = getShiftForEmployee(employee.id, day);
+                                        const shiftType = SHIFT_TYPES.find(
+                                            type => type.value === (shift?.shiftType || 'NOT_WORKING')
+                                        ) || SHIFT_TYPES[0];
+
                                         const isWeekend = day.getDay() === 0 || day.getDay() === 6;
 
                                         return (
-                                            <th
-                                                key={`duplicate-${day.toISOString()}`}
-                                                className={`border border-gray-300 p-2 text-center min-w-12 select-none ${
-                                                    isWeekend ? 'bg-blue-100' : 'bg-gray-100'
+                                            <td
+                                                key={day.toISOString()}
+                                                className={`border border-gray-300 p-1 text-center select-none ${
+                                                    isReadOnly
+                                                        ? 'cursor-not-allowed opacity-90'
+                                                        : 'cursor-pointer hover:opacity-80 hover:shadow-md'
+                                                } ${
+                                                    isWeekend ? 'bg-blue-100' : 'bg-white'
                                                 }`}
+                                                onClick={() => handleShiftClick(
+                                                    employee.id,
+                                                    day,
+                                                    shift?.shiftType || 'NOT_WORKING'
+                                                )}
+                                                title={isReadOnly
+                                                    ? `${employee.name}, ${day.toLocaleDateString()}: ${shiftType.title} (только просмотр)`
+                                                    : `${employee.name}, ${day.toLocaleDateString()}: ${shiftType.title}`
+                                                }
                                             >
-                                                <div className="text-sm font-medium select-none">
-                                                    {day.getDate()}
+                                                <div className={`${shiftType.color} rounded p-2 text-lg select-none`}>
+                                                    {shiftType.label}
                                                 </div>
-                                                <div className="text-xs text-gray-500 select-none">
-                                                    {day.toLocaleDateString('ru-RU', {weekday: 'short'})}
-                                                </div>
-                                            </th>
+                                            </td>
                                         );
                                     })}
                                 </tr>
-                            )}
-                        </React.Fragment>
-                    ))}
+
+                                {(employeeIndex + 1) % 10 === 0 && employeeIndex !== sortedEmployees.length - 1 && (
+                                    <tr>
+                                        <td className={`
+                                            border border-gray-300 p-2 font-medium sticky left-0 z-10 
+                                            select-none bg-gray-100
+                                            ${sortByAlphabet ? 'bg-blue-50' : 'bg-gray-100'}
+                                        `}>
+                                            <div className="text-sm text-gray-600">Сотрудник</div>
+                                        </td>
+                                        {daysInMonth.map(day => {
+                                            const isWeekend = day.getDay() === 0 || day.getDay() === 6;
+
+                                            return (
+                                                <th
+                                                    key={`duplicate-${day.toISOString()}`}
+                                                    className={`border border-gray-300 p-2 text-center min-w-12 select-none ${
+                                                        isWeekend ? 'bg-blue-100' : 'bg-gray-100'
+                                                    }`}
+                                                >
+                                                    <div className="text-sm font-medium select-none">
+                                                        {day.getDate()}
+                                                    </div>
+                                                    <div className="text-xs text-gray-500 select-none">
+                                                        {day.toLocaleDateString('ru-RU', {weekday: 'short'})}
+                                                    </div>
+                                                </th>
+                                            );
+                                        })}
+                                    </tr>
+                                )}
+                            </React.Fragment>
+                        );
+                    })}
                     </tbody>
                 </table>
             </div>
