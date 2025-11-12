@@ -54,7 +54,7 @@ export const SharedCalendarPage: React.FC = () => {
             setSharedData(data);
 
         } catch (error: any) {
-            console.error('❌ Error loading shared calendar:', error);
+            console.error('Error loading shared calendar:', error);
             setError(error.response?.data?.message || 'Ссылка недействительна или истекла');
         } finally {
             setIsLoading(false);
@@ -119,6 +119,7 @@ export const SharedCalendarPage: React.FC = () => {
                 </div>
             </div>
             <CalendarGrid
+                calendarId={sharedData.calendar.id}
                 employees={sharedData.calendar.employees || []}
                 shifts={sharedData.calendar.shifts || []}
                 onShiftChange={handleShiftChange}

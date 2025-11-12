@@ -323,6 +323,7 @@ export const CalendarPage: React.FC = () => {
             />
 
             <CalendarGrid
+                calendarId={calendarId!}
                 employees={employees}
                 shifts={shifts}
                 onShiftChange={handleShiftChange}
