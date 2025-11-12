@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useMemo} from 'react';
+import React ,{useState, useEffect, useMemo} from 'react';
 
 interface Employee {
     id: string;
@@ -20,6 +20,7 @@ interface CalendarGridProps {
     isReadOnly?: boolean;
     onMonthDaysUpdate?: (days: Date[]) => void;
     onMonthChange?: (month: Date) => void;
+    onEmployeeOrderChange?: (employeeIds: string[]) => void;
 }
 
 const SHIFT_TYPES = [
@@ -33,13 +34,16 @@ const SHIFT_TYPES = [
     {value: 'COMPUTED_TOMOGRAPHY', label: '🖥', color: 'bg-gray-300', title: 'Компьютерная томография'},
 ];
 
+const EMPLOYEE_ORDER_KEY = 'employeeManualOrder';
+
 export const CalendarGrid: React.FC<CalendarGridProps> = ({
                                                               employees,
                                                               shifts,
                                                               onShiftChange,
                                                               isReadOnly = false,
                                                               onMonthDaysUpdate,
-                                                              onMonthChange
+                                                              onMonthChange,
+                                                              onEmployeeOrderChange
                                                           }) => {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [sortByAlphabet, setSortByAlphabet] = useState(false);
@@ -47,12 +51,53 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
     const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
     const [manualOrder, setManualOrder] = useState<string[]>([]);
 
-    // Инициализируем ручной порядок при загрузке сотрудников
+    useEffect(() => {
+        const savedOrder = localStorage.getItem(EMPLOYEE_ORDER_KEY);
+        if (savedOrder) {
+            try {
+                const parsedOrder = JSON.parse(savedOrder);
+                setManualOrder(parsedOrder);
+            } catch (error) {
+                console.error('Ошибка при загрузке порядка сотрудников:', error);
+                // Если ошибка, инициализируем начальным порядком
+                setManualOrder(employees.map(emp => emp.id));
+            }
+        } else {
+            // Первая инициализация
+            setManualOrder(employees.map(emp => emp.id));
+        }
+    }, []);
+
     useEffect(() => {
         if (employees.length > 0 && manualOrder.length === 0) {
             setManualOrder(employees.map(emp => emp.id));
+        } else if (employees.length > 0) {
+            // Обновляем порядок при добавлении/удалении сотрудников
+            const currentOrder = [...manualOrder];
+            const newEmployees = employees.filter(emp => !currentOrder.includes(emp.id));
+            const removedEmployees = currentOrder.filter(id => !employees.some(emp => emp.id === id));
+
+            const updatedOrder = currentOrder.filter(id => !removedEmployees.includes(id));
+
+            newEmployees.forEach(emp => {
+                updatedOrder.push(emp.id);
+            });
+
+            if (updatedOrder.length !== manualOrder.length) {
+                setManualOrder(updatedOrder);
+            }
         }
     }, [employees, manualOrder.length]);
+
+    useEffect(() => {
+        if (manualOrder.length > 0) {
+            localStorage.setItem(EMPLOYEE_ORDER_KEY, JSON.stringify(manualOrder));
+
+            if (onEmployeeOrderChange) {
+                onEmployeeOrderChange(manualOrder);
+            }
+        }
+    }, [manualOrder, onEmployeeOrderChange]);
 
     const sortedEmployees = useMemo(() => {
         if (sortByAlphabet) {
@@ -107,11 +152,11 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
 
     const handleEmployeeHeaderClick = () => {
         setSortByAlphabet(prev => !prev);
-        setSelectedEmployeeId(null); // Сбрасываем выделение при переключении сортировки
+        setSelectedEmployeeId(null);
     };
 
     const handleEmployeeClick = (employeeId: string) => {
-        if (sortByAlphabet) return; // Не позволяем выбирать при алфавитной сортировке
+        if (sortByAlphabet) return;
 
         setSelectedEmployeeId(prev =>
             prev === employeeId ? null : employeeId
@@ -140,6 +185,12 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                 [newOrder[currentIndex + 1], newOrder[currentIndex]];
             setManualOrder(newOrder);
         }
+    };
+
+    const resetManualOrder = () => {
+        const defaultOrder = employees.map(emp => emp.id);
+        setManualOrder(defaultOrder);
+        setSelectedEmployeeId(null);
     };
 
     const handleShiftClick = (employeeId: string, date: Date, currentShiftType: string) => {
@@ -192,27 +243,39 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                         {sortByAlphabet ? 'Сортировка по алфавиту' : 'Ручная сортировка'}
                     </button>
 
-                    {!sortByAlphabet && selectedEmployeeId && (
+                    {!sortByAlphabet && (
                         <div className="flex items-center gap-2">
-                            <span className="text-sm text-gray-600">
-                                Выбран: {employees.find(e => e.id === selectedEmployeeId)?.name}
-                            </span>
-                            <button
-                                onClick={moveEmployeeUp}
-                                className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
-                                disabled={!selectedEmployeeId || manualOrder.indexOf(selectedEmployeeId) === 0}
-                                title="Переместить вверх"
-                            >
-                                ↑
-                            </button>
-                            <button
-                                onClick={moveEmployeeDown}
-                                className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
-                                disabled={!selectedEmployeeId || manualOrder.indexOf(selectedEmployeeId) === manualOrder.length - 1}
-                                title="Переместить вниз"
-                            >
-                                ↓
-                            </button>
+                            {selectedEmployeeId ? (
+                                <>
+                                    <span className="text-sm text-gray-600">
+                                        Выбран: {employees.find(e => e.id === selectedEmployeeId)?.name}
+                                    </span>
+                                    <button
+                                        onClick={moveEmployeeUp}
+                                        className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                                        disabled={!selectedEmployeeId || manualOrder.indexOf(selectedEmployeeId) === 0}
+                                        title="Переместить вверх"
+                                    >
+                                        ↑
+                                    </button>
+                                    <button
+                                        onClick={moveEmployeeDown}
+                                        className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                                        disabled={!selectedEmployeeId || manualOrder.indexOf(selectedEmployeeId) === manualOrder.length - 1}
+                                        title="Переместить вниз"
+                                    >
+                                        ↓
+                                    </button>
+                                </>
+                            ) : (
+                                <button
+                                    onClick={resetManualOrder}
+                                    className="px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600 text-sm"
+                                    title="Сбросить порядок сотрудников"
+                                >
+                                    Сбросить порядок
+                                </button>
+                            )}
                         </div>
                     )}
                 </div>
@@ -227,7 +290,6 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                 )}
             </div>
 
-            {/* Остальная часть компонента остается такой же, но с небольшими изменениями в отображении сотрудников */}
             <div className="flex justify-between items-center mb-6">
                 <button
                     onClick={goToPreviousMonth}
