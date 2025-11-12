@@ -1,4 +1,5 @@
-import React ,{useState, useEffect, useMemo} from 'react';
+import React, {useState, useEffect, useMemo} from 'react';
+import { employeeService } from '../http/employeeService';
 
 interface Employee {
     id: string;
@@ -13,7 +14,13 @@ interface Shift {
     notes?: string;
 }
 
+interface EmployeeOrder {
+    employeeId: string;
+    orderIndex: number;
+}
+
 interface CalendarGridProps {
+    calendarId: string;
     employees: Employee[];
     shifts: Shift[];
     onShiftChange: (employeeId: string, date: Date, shiftType: string) => void;
@@ -34,9 +41,8 @@ const SHIFT_TYPES = [
     {value: 'COMPUTED_TOMOGRAPHY', label: '🖥', color: 'bg-gray-300', title: 'Компьютерная томография'},
 ];
 
-const EMPLOYEE_ORDER_KEY = 'employeeManualOrder';
-
 export const CalendarGrid: React.FC<CalendarGridProps> = ({
+                                                              calendarId,
                                                               employees,
                                                               shifts,
                                                               onShiftChange,
@@ -50,29 +56,55 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
     const [daysInMonth, setDaysInMonth] = useState<Date[]>([]);
     const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
     const [manualOrder, setManualOrder] = useState<string[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [saveError, setSaveError] = useState<string | null>(null);
 
     useEffect(() => {
-        const savedOrder = localStorage.getItem(EMPLOYEE_ORDER_KEY);
-        if (savedOrder) {
+        const loadEmployeeOrder = async () => {
             try {
-                const parsedOrder = JSON.parse(savedOrder);
-                setManualOrder(parsedOrder);
+                setIsLoading(true);
+                setSaveError(null);
+
+                const savedOrder = await employeeService.getEmployeeOrder(calendarId);
+
+                if (savedOrder && savedOrder.length > 0) {
+                    const order = savedOrder
+                        .sort((a: EmployeeOrder, b: EmployeeOrder) => a.orderIndex - b.orderIndex)
+                        .map((item: EmployeeOrder) => item.employeeId);
+                    setManualOrder(order);
+                } else {
+                    setManualOrder(employees.map(emp => emp.id));
+                }
             } catch (error) {
                 console.error('Ошибка при загрузке порядка сотрудников:', error);
-                // Если ошибка, инициализируем начальным порядком
+                setSaveError('Не удалось загрузить порядок сотрудников');
                 setManualOrder(employees.map(emp => emp.id));
+            } finally {
+                setIsLoading(false);
             }
-        } else {
-            // Первая инициализация
-            setManualOrder(employees.map(emp => emp.id));
+        };
+
+        if (calendarId) {
+            loadEmployeeOrder();
         }
-    }, []);
+    }, [calendarId]);
+
+    const saveOrderToServer = async (order: string[]) => {
+        try {
+            setSaveError(null);
+            await employeeService.saveEmployeeOrder(calendarId, order);
+
+            if (onEmployeeOrderChange) {
+                onEmployeeOrderChange(order);
+            }
+        } catch (error) {
+            console.error('Ошибка при сохранении порядка:', error);
+            setSaveError('Не удалось сохранить порядок сотрудников');
+        }
+    };
 
     useEffect(() => {
-        if (employees.length > 0 && manualOrder.length === 0) {
-            setManualOrder(employees.map(emp => emp.id));
-        } else if (employees.length > 0) {
-            // Обновляем порядок при добавлении/удалении сотрудников
+        if (employees.length > 0 && manualOrder.length > 0 && !isLoading) {
             const currentOrder = [...manualOrder];
             const newEmployees = employees.filter(emp => !currentOrder.includes(emp.id));
             const removedEmployees = currentOrder.filter(id => !employees.some(emp => emp.id === id));
@@ -85,34 +117,24 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
 
             if (updatedOrder.length !== manualOrder.length) {
                 setManualOrder(updatedOrder);
+                saveOrderToServer(updatedOrder);
             }
         }
-    }, [employees, manualOrder.length]);
-
-    useEffect(() => {
-        if (manualOrder.length > 0) {
-            localStorage.setItem(EMPLOYEE_ORDER_KEY, JSON.stringify(manualOrder));
-
-            if (onEmployeeOrderChange) {
-                onEmployeeOrderChange(manualOrder);
-            }
-        }
-    }, [manualOrder, onEmployeeOrderChange]);
+    }, [employees, manualOrder.length, isLoading]);
 
     const sortedEmployees = useMemo(() => {
         if (sortByAlphabet) {
-            return [...employees].sort((a, b) =>
+            return [...employees].sort((a: Employee, b: Employee) =>
                 a.name.localeCompare(b.name, 'ru')
             );
-        } else if (manualOrder.length > 0) {
-            // Сортируем по ручному порядку
+        } else if (manualOrder.length > 0 && !isLoading) {
             const employeeMap = new Map(employees.map(emp => [emp.id, emp]));
             return manualOrder
                 .map(id => employeeMap.get(id))
                 .filter((emp): emp is Employee => emp !== undefined);
         }
         return employees;
-    }, [employees, sortByAlphabet, manualOrder]);
+    }, [employees, sortByAlphabet, manualOrder, isLoading]);
 
     useEffect(() => {
         generateCalendarDays();
@@ -163,7 +185,7 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
         );
     };
 
-    const moveEmployeeUp = () => {
+    const moveEmployeeUp = async () => {
         if (!selectedEmployeeId || sortByAlphabet) return;
 
         const currentIndex = manualOrder.indexOf(selectedEmployeeId);
@@ -171,11 +193,13 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
             const newOrder = [...manualOrder];
             [newOrder[currentIndex - 1], newOrder[currentIndex]] =
                 [newOrder[currentIndex], newOrder[currentIndex - 1]];
+
             setManualOrder(newOrder);
+            await saveOrderToServer(newOrder);
         }
     };
 
-    const moveEmployeeDown = () => {
+    const moveEmployeeDown = async () => {
         if (!selectedEmployeeId || sortByAlphabet) return;
 
         const currentIndex = manualOrder.indexOf(selectedEmployeeId);
@@ -183,14 +207,17 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
             const newOrder = [...manualOrder];
             [newOrder[currentIndex], newOrder[currentIndex + 1]] =
                 [newOrder[currentIndex + 1], newOrder[currentIndex]];
+
             setManualOrder(newOrder);
+            await saveOrderToServer(newOrder);
         }
     };
 
-    const resetManualOrder = () => {
+    const resetManualOrder = async () => {
         const defaultOrder = employees.map(emp => emp.id);
         setManualOrder(defaultOrder);
         setSelectedEmployeeId(null);
+        await saveOrderToServer(defaultOrder);
     };
 
     const handleShiftClick = (employeeId: string, date: Date, currentShiftType: string) => {
@@ -225,7 +252,6 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
 
     return (
         <div className="select-none mb-3">
-            {/* Панель управления сортировкой */}
             <div className="flex justify-between items-center mb-4 p-3 bg-gray-50 rounded-lg">
                 <div className="flex items-center gap-4">
                     <button
@@ -235,12 +261,14 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                                 ? 'bg-blue-500 text-white'
                                 : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
                         }`}
+                        disabled={isLoading}
                         title={sortByAlphabet
                             ? "Нажмите чтобы отключить сортировку по алфавиту"
                             : "Нажмите чтобы включить сортировку по алфавиту"
                         }
                     >
                         {sortByAlphabet ? 'Сортировка по алфавиту' : 'Ручная сортировка'}
+                        {isLoading && ' (загрузка...)'}
                     </button>
 
                     {!sortByAlphabet && (
@@ -253,7 +281,7 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                                     <button
                                         onClick={moveEmployeeUp}
                                         className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
-                                        disabled={!selectedEmployeeId || manualOrder.indexOf(selectedEmployeeId) === 0}
+                                        disabled={!selectedEmployeeId || manualOrder.indexOf(selectedEmployeeId) === 0 || isLoading}
                                         title="Переместить вверх"
                                     >
                                         ↑
@@ -261,7 +289,7 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                                     <button
                                         onClick={moveEmployeeDown}
                                         className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
-                                        disabled={!selectedEmployeeId || manualOrder.indexOf(selectedEmployeeId) === manualOrder.length - 1}
+                                        disabled={!selectedEmployeeId || manualOrder.indexOf(selectedEmployeeId) === manualOrder.length - 1 || isLoading}
                                         title="Переместить вниз"
                                     >
                                         ↓
@@ -270,7 +298,8 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                             ) : (
                                 <button
                                     onClick={resetManualOrder}
-                                    className="px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600 text-sm"
+                                    className="px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600 text-sm disabled:bg-gray-300 disabled:cursor-not-allowed"
+                                    disabled={isLoading}
                                     title="Сбросить порядок сотрудников"
                                 >
                                     Сбросить порядок
@@ -282,18 +311,33 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
 
                 {!sortByAlphabet && (
                     <div className="text-sm text-gray-500">
-                        {selectedEmployeeId
-                            ? "Кликните на сотрудника для выбора, затем используйте стрелки"
-                            : "Кликните на сотрудника чтобы выбрать для перемещения"
+                        {isLoading
+                            ? "Загрузка порядка сотрудников..."
+                            : selectedEmployeeId
+                                ? "Кликните на сотрудника для выбора, затем используйте стрелки"
+                                : "Кликните на сотрудника чтобы выбрать для перемещения"
                         }
                     </div>
                 )}
             </div>
 
+            {saveError && (
+                <div className="mb-4 p-3 bg-red-100 border border-red-300 text-red-700 rounded-lg">
+                    {saveError}
+                    <button
+                        onClick={() => setSaveError(null)}
+                        className="float-right text-red-800 hover:text-red-900"
+                    >
+                        ×
+                    </button>
+                </div>
+            )}
+
             <div className="flex justify-between items-center mb-6">
                 <button
                     onClick={goToPreviousMonth}
                     className="bg-white border-black border-1 text-1xl text-black px-4 py-2 rounded transition-colors select-none"
+                    disabled={isLoading}
                 >
                     ←
                 </button>
@@ -310,11 +354,17 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                             Сортировка по алфавиту
                         </div>
                     )}
+                    {isLoading && (
+                        <div className="text-sm text-gray-500 mt-1 select-none">
+                            Загрузка...
+                        </div>
+                    )}
                 </div>
 
                 <button
                     onClick={goToNextMonth}
                     className="bg-white border-black border-1 text-1xl text-black px-4 py-2 rounded transition-colors select-none"
+                    disabled={isLoading}
                 >
                     →
                 </button>
@@ -327,16 +377,19 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                         <th
                             className={`
                                 border border-gray-300 p-2 min-w-24 mr-1 sticky left-0 z-10 
-                                select-none cursor-pointer transition-colors
+                                select-none transition-colors
                                 ${sortByAlphabet
                                 ? 'bg-blue-50 border-blue-300 hover:bg-blue-100'
                                 : 'bg-white hover:bg-gray-100'
                             }
+                                ${isLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
                             `}
-                            onClick={handleEmployeeHeaderClick}
-                            title={sortByAlphabet
-                                ? "Нажмите чтобы отключить сортировку по алфавиту"
-                                : "Нажмите чтобы включить сортировку по алфавиту"
+                            onClick={isLoading ? undefined : handleEmployeeHeaderClick}
+                            title={isLoading
+                                ? "Загрузка..."
+                                : sortByAlphabet
+                                    ? "Нажмите чтобы отключить сортировку по алфавиту"
+                                    : "Нажмите чтобы включить сортировку по алфавиту"
                             }
                         >
                             <div className="flex items-center justify-between">
@@ -356,7 +409,7 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                                     key={day.toISOString()}
                                     className={`border border-gray-300 p-2 text-center min-w-12 select-none ${
                                         isWeekend ? 'bg-blue-100' : 'bg-white'
-                                    }`}
+                                    } ${isLoading ? 'opacity-50' : ''}`}
                                 >
                                     <div className="text-sm font-medium select-none">
                                         {day.getDate()}
@@ -373,7 +426,7 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                     <tbody>
                     {sortedEmployees.map((employee, employeeIndex) => {
                         const isSelected = selectedEmployeeId === employee.id;
-                        const isSelectable = !sortByAlphabet;
+                        const isSelectable = !sortByAlphabet && !isLoading;
 
                         return (
                             <React.Fragment key={employee.id}>
@@ -389,13 +442,16 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                                                 : 'bg-white hover:bg-gray-50'
                                         }
                                             ${isSelectable ? 'cursor-pointer' : 'cursor-default'}
+                                            ${isLoading ? 'opacity-50' : ''}
                                         `}
                                         onClick={() => isSelectable && handleEmployeeClick(employee.id)}
-                                        title={isSelectable
-                                            ? isSelected
-                                                ? "Сотрудник выбран. Используйте кнопки для перемещения"
-                                                : "Кликните чтобы выбрать сотрудника для перемещения"
-                                            : "Переключитесь на ручную сортировку для выбора сотрудников"
+                                        title={isLoading
+                                            ? "Загрузка..."
+                                            : isSelectable
+                                                ? isSelected
+                                                    ? "Сотрудник выбран. Используйте кнопки для перемещения"
+                                                    : "Кликните чтобы выбрать сотрудника для перемещения"
+                                                : "Переключитесь на ручную сортировку для выбора сотрудников"
                                         }
                                     >
                                         <div className="flex items-center justify-between">
@@ -418,20 +474,22 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                                             <td
                                                 key={day.toISOString()}
                                                 className={`border border-gray-300 p-1 text-center select-none ${
-                                                    isReadOnly
+                                                    isReadOnly || isLoading
                                                         ? 'cursor-not-allowed opacity-90'
                                                         : 'cursor-pointer hover:opacity-80 hover:shadow-md'
                                                 } ${
                                                     isWeekend ? 'bg-blue-100' : 'bg-white'
-                                                }`}
-                                                onClick={() => handleShiftClick(
+                                                } ${isLoading ? 'opacity-50' : ''}`}
+                                                onClick={() => !isLoading && handleShiftClick(
                                                     employee.id,
                                                     day,
                                                     shift?.shiftType || 'NOT_WORKING'
                                                 )}
-                                                title={isReadOnly
-                                                    ? `${employee.name}, ${day.toLocaleDateString()}: ${shiftType.title} (только просмотр)`
-                                                    : `${employee.name}, ${day.toLocaleDateString()}: ${shiftType.title}`
+                                                title={isLoading
+                                                    ? "Загрузка..."
+                                                    : isReadOnly
+                                                        ? `${employee.name}, ${day.toLocaleDateString()}: ${shiftType.title} (только просмотр)`
+                                                        : `${employee.name}, ${day.toLocaleDateString()}: ${shiftType.title}`
                                                 }
                                             >
                                                 <div className={`${shiftType.color} rounded p-2 text-lg select-none`}>
@@ -448,6 +506,7 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                                             border border-gray-300 p-2 font-medium sticky left-0 z-10 
                                             select-none bg-gray-100
                                             ${sortByAlphabet ? 'bg-blue-50' : 'bg-gray-100'}
+                                            ${isLoading ? 'opacity-50' : ''}
                                         `}>
                                             <div className="text-sm text-gray-600">Сотрудник</div>
                                         </td>
@@ -459,7 +518,7 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                                                     key={`duplicate-${day.toISOString()}`}
                                                     className={`border border-gray-300 p-2 text-center min-w-12 select-none ${
                                                         isWeekend ? 'bg-blue-100' : 'bg-gray-100'
-                                                    }`}
+                                                    } ${isLoading ? 'opacity-50' : ''}`}
                                                 >
                                                     <div className="text-sm font-medium select-none">
                                                         {day.getDate()}

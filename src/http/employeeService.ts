@@ -16,5 +16,17 @@ export const employeeService = {
     async deleteEmployee(calendarId: string, employeeId: string) {
         const response = await $api.delete(`/calendar/${calendarId}/employees/${employeeId}`);
         return response.data;
-    }
+    },
+
+    async getEmployeeOrder(calendarId: string) {
+        const response = await $api.get(`/calendar/${calendarId}/employee-order`);
+        return response.data;
+    },
+
+    async saveEmployeeOrder(calendarId: string, employeeIds: string[]) {
+        const response = await $api.post(`/calendar/${calendarId}/employee-order`, {
+            employeeIds
+        });
+        return response.data;
+    },
 };
