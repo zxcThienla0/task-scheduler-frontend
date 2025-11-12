@@ -54,6 +54,8 @@ export const CalendarPage: React.FC = () => {
     const [currentMonthDays, setCurrentMonthDays] = useState<Date[]>([]);
     const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
 
+    const [copiedLink, setCopiedLink] = useState<string | null>(null);
+
     useEffect(() => {
         if (calendarId) {
             loadCalendarData();
@@ -215,10 +217,21 @@ export const CalendarPage: React.FC = () => {
         }
     };
 
-    const copyToClipboard = (text: string) => {
-        navigator.clipboard.writeText(text).then(() => {
-            alert('Ссылка скопирована в буфер обмена!');
-        });
+    const copyToClipboard = async (text: string) => {
+        try {
+            await navigator.clipboard.writeText(text);
+            setCopiedLink(text);
+            setTimeout(() => setCopiedLink(null), 2000);
+        } catch (err) {
+            const input = document.createElement('input');
+            input.value = text;
+            document.body.appendChild(input);
+            input.select();
+            document.execCommand('copy');
+            document.body.removeChild(input);
+            setCopiedLink(text);
+            setTimeout(() => setCopiedLink(null), 2000);
+        }
     };
 
     const handleMonthDaysUpdate = (days: Date[]) => {
@@ -284,6 +297,12 @@ export const CalendarPage: React.FC = () => {
                     </button>
                 </div>
             </div>
+
+            {copiedLink && (
+                <div className="fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded shadow-lg">
+                    Ссылка скопирована!
+                </div>
+            )}
 
             {showShareModal && newShareLink && (
                 <div className="fixed inset-0 bg-[#00000080] flex items-center justify-center z-50">

@@ -61,10 +61,6 @@ export const SharedCalendarPage: React.FC = () => {
         }
     };
 
-    const handleShiftChange = () => {
-        alert('Изменения доступны только владельцу календаря');
-    };
-
     if (isLoading) {
         return (
             <div className="flex justify-center items-center h-32">
@@ -122,7 +118,7 @@ export const SharedCalendarPage: React.FC = () => {
                 calendarId={sharedData.calendar.id}
                 employees={sharedData.calendar.employees || []}
                 shifts={sharedData.calendar.shifts || []}
-                onShiftChange={handleShiftChange}
+                onShiftChange={() => {}}
                 isReadOnly={true}
             />
         </div>
