@@ -39,6 +39,7 @@ const SHIFT_TYPES = [
     {value: 'DENTIST_DAY', label: '🦷', color: 'bg-white', title: 'Стоматологический день'},
     {value: 'SURGERY_DAY', label: '🪡', color: 'bg-blue-200', title: 'Хирургический день'},
     {value: 'COMPUTED_TOMOGRAPHY', label: '🖥', color: 'bg-gray-300', title: 'Компьютерная томография'},
+    {value: 'NN_DAY', label: '👨🏻‍⚕️', color: 'bg-white', title: 'Смена с Николаем Н.'},
 ];
 
 export const CalendarGrid: React.FC<CalendarGridProps> = ({

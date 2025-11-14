@@ -106,6 +106,7 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
         .Dentist_Day { background-color: #ffffff; }
         .Surgery_Day { background-color: #6cccff; }
         .Computed_Tomography { background-color: #d8d8d8; }
+        .nn_day {background-color: #ffffff;}
         .legend { 
             margin-top: 30px; 
             display: flex; 
@@ -225,6 +226,11 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
                         shiftClass = 'Computed_Tomography';
                         shiftSymbol = 'КТ';
                         shiftTitle = 'Компьютерная томография';
+                        break;
+                    case 'NN_DAY':
+                        shiftClass = 'nn_day';
+                        shiftSymbol = 'НН';
+                        shiftTitle = 'Смена с Николаем Н.';
                         break;
                     default:
                         shiftClass = 'shift-not-working';
