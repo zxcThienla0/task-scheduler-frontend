@@ -19,19 +19,26 @@ $api.interceptors.response.use(
     (config) => config,
     async (error) => {
         const originalRequest = error.config;
-        if (error.response.status === 401 && !originalRequest._isRetry) {
+
+        if (error.response?.status === 401 &&
+            !originalRequest._isRetry &&
+            !originalRequest.url?.includes('/auth/refresh')) {
+
             originalRequest._isRetry = true;
             try {
-                const response = await axios.get(`${API_URL}/auth/refresh`, {
-                    withCredentials: true
-                });
+                const response = await $api.get('/auth/refresh');
                 localStorage.setItem('accessToken', response.data.accessToken);
-                return $api.request(originalRequest);
-            } catch {
-                console.log('Не авторизован');
+                originalRequest.headers.Authorization = `Bearer ${response.data.accessToken}`;
+                return $api(originalRequest);
+            } catch (refreshError) {
+                console.log('Refresh token expired or invalid');
+                localStorage.removeItem('accessToken');
+                if (window.location.pathname !== '/login') {
+                    window.location.href = '/login';
+                }
             }
         }
-        throw error;
+        return Promise.reject(error);
     }
 );
 
