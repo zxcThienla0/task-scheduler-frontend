@@ -332,7 +332,9 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
             const updatePromises = [];
 
             for (const change of pendingChanges) {
-                if (change.shiftId) {
+                const isTempId = change.shiftId && change.shiftId.startsWith('temp_');
+
+                if (change.shiftId && !isTempId) {
                     updatePromises.push(
                         shiftService.updateShift(change.shiftId, change.shiftType)
                     );
