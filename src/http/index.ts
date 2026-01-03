@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = '/api';
+const API_URL = 'https://task-scheduler-wheat.vercel.app/api/';
 
 const $api = axios.create({
     withCredentials: true,

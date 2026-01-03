@@ -55,6 +55,13 @@ export const CalendarPage: React.FC = () => {
     const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
 
     const [copiedLink, setCopiedLink] = useState<string | null>(null);
+    const [localShifts, setLocalShifts] = useState<Shift[]>([]);
+
+    useEffect(() => {
+        if (shifts.length > 0) {
+            setLocalShifts(shifts);
+        }
+    }, [shifts]);
 
     useEffect(() => {
         if (calendarId) {
@@ -82,9 +89,11 @@ export const CalendarPage: React.FC = () => {
                 try {
                     const shiftsData = await shiftService.getShifts(calendarId);
                     setShifts(shiftsData || []);
+                    setLocalShifts(shiftsData || []);
                 } catch (error) {
                     console.error('Ошибка загрузки смен:', error);
                     setShifts([]);
+                    setLocalShifts([]);
                 }
 
                 try {
@@ -109,6 +118,8 @@ export const CalendarPage: React.FC = () => {
 
             const newEmployee = await employeeService.createEmployee(calendarId, name);
             setEmployees(prev => [...prev, newEmployee]);
+
+            await loadShifts();
         } catch (error) {
             console.error('Ошибка добавления сотрудника:', error);
             alert('Ошибка при добавлении сотрудника');
@@ -124,8 +135,8 @@ export const CalendarPage: React.FC = () => {
             const updatedEmployees = await employeeService.getEmployees(calendarId);
             setEmployees(updatedEmployees || []);
 
-            const updatedShifts = shifts.filter(shift => shift.employeeId !== employeeId);
-            setShifts(updatedShifts);
+            setLocalShifts(prev => prev.filter(shift => shift.employeeId !== employeeId));
+            setShifts(prev => prev.filter(shift => shift.employeeId !== employeeId));
 
         } catch (error) {
             console.error('Ошибка удаления сотрудника:', error);
@@ -133,28 +144,43 @@ export const CalendarPage: React.FC = () => {
         }
     };
 
-    const handleShiftChange = async (employeeId: string, date: Date, shiftType: string) => {
-        try {
-            if (!calendarId) return;
+    const handleShiftChange = (employeeId: string, date: Date, shiftType: string) => {
+        const existingShift = localShifts.find(
+            shift => shift.employeeId === employeeId &&
+                new Date(shift.date).toDateString() === date.toDateString()
+        );
 
-            const existingShift = shifts.find(
-                shift => shift.employeeId === employeeId &&
-                    new Date(shift.date).toDateString() === date.toDateString()
-            );
-
-            if (existingShift) {
-                const updatedShift = await shiftService.updateShift(existingShift.id, shiftType);
-                setShifts(prev => prev.map(shift =>
-                    shift.id === existingShift.id ? updatedShift : shift
-                ));
-            } else {
-                const newShift = await shiftService.createShift(calendarId, employeeId, date, shiftType);
-                setShifts(prev => [...prev, newShift]);
-            }
-
-        } catch (error) {
-            console.error('Ошибка обновления смены:', error);
+        if (existingShift) {
+            setLocalShifts(prev => prev.map(shift =>
+                shift.id === existingShift.id
+                    ? { ...shift, shiftType }
+                    : shift
+            ));
+        } else {
+            const newShift: Shift = {
+                id: `temp_${Date.now()}_${employeeId}_${date.getTime()}`,
+                date: date.toISOString(),
+                shiftType,
+                employeeId
+            };
+            setLocalShifts(prev => [...prev, newShift]);
         }
+    };
+
+    const loadShifts = async () => {
+        if (!calendarId) return;
+
+        try {
+            const shiftsData = await shiftService.getShifts(calendarId);
+            setShifts(shiftsData || []);
+            setLocalShifts(shiftsData || []);
+        } catch (error) {
+            console.error('Ошибка загрузки смен:', error);
+        }
+    };
+
+    const handleEmployeeOrderChange = async (employeeIds: string[]) => {
+        console.log('Порядок сотрудников изменен:', employeeIds);
     };
 
     const handleCreateShareLink = async () => {
@@ -344,10 +370,12 @@ export const CalendarPage: React.FC = () => {
             <CalendarGrid
                 calendarId={calendarId!}
                 employees={employees}
-                shifts={shifts}
+                shifts={localShifts}
                 onShiftChange={handleShiftChange}
                 onMonthDaysUpdate={handleMonthDaysUpdate}
                 onMonthChange={handleMonthChange}
+                onEmployeeOrderChange={handleEmployeeOrderChange}
+                onDataRefresh={loadShifts}
             />
 
             <div className="mb-8 max-w-7xl mx-auto">

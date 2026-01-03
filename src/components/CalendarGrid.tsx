@@ -1,5 +1,6 @@
-import React, {useState, useEffect, useMemo} from 'react';
+import React, {useState, useEffect, useMemo, useCallback} from 'react';
 import { employeeService } from '../http/employeeService';
+import { shiftService } from '../http/shiftService';
 
 interface Employee {
     id: string;
@@ -28,6 +29,14 @@ interface CalendarGridProps {
     onMonthDaysUpdate?: (days: Date[]) => void;
     onMonthChange?: (month: Date) => void;
     onEmployeeOrderChange?: (employeeIds: string[]) => void;
+    onDataRefresh?: () => void;
+}
+
+interface PendingChange {
+    employeeId: string;
+    date: Date;
+    shiftType: string;
+    shiftId?: string;
 }
 
 const SHIFT_TYPES = [
@@ -50,7 +59,8 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                                                               isReadOnly = false,
                                                               onMonthDaysUpdate,
                                                               onMonthChange,
-                                                              onEmployeeOrderChange
+                                                              onEmployeeOrderChange,
+                                                              onDataRefresh
                                                           }) => {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [sortByAlphabet, setSortByAlphabet] = useState(false);
@@ -59,6 +69,9 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
     const [manualOrder, setManualOrder] = useState<string[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [saveError, setSaveError] = useState<string | null>(null);
+    const [pendingChanges, setPendingChanges] = useState<PendingChange[]>([]);
+    const [isSaving, setIsSaving] = useState(false);
+    const [saveSuccess, setSaveSuccess] = useState(false);
 
     useEffect(() => {
         const loadEmployeeOrder = async () => {
@@ -89,6 +102,52 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
             loadEmployeeOrder();
         }
     }, [calendarId]);
+
+    useEffect(() => {
+        const savedChanges = localStorage.getItem(`calendar_${calendarId}_pending`);
+        if (savedChanges) {
+            try {
+                const parsed = JSON.parse(savedChanges).map((change: any) => ({
+                    ...change,
+                    date: new Date(change.date)
+                }));
+                setPendingChanges(parsed);
+            } catch (error) {
+                console.error('Ошибка при восстановлении изменений:', error);
+                localStorage.removeItem(`calendar_${calendarId}_pending`);
+            }
+        }
+    }, [calendarId]);
+
+    useEffect(() => {
+        const savePendingChangesToStorage = () => {
+            if (pendingChanges.length > 0) {
+                localStorage.setItem(`calendar_${calendarId}_pending`,
+                    JSON.stringify(pendingChanges.map(change => ({
+                        ...change,
+                        date: change.date.toISOString()
+                    })))
+                );
+            } else {
+                localStorage.removeItem(`calendar_${calendarId}_pending`);
+            }
+        };
+
+        savePendingChangesToStorage();
+    }, [pendingChanges, calendarId]);
+
+    useEffect(() => {
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            if (pendingChanges.length > 0 && !isSaving) {
+                e.preventDefault();
+                e.returnValue = 'У вас есть несохраненные изменения. Вы уверены, что хотите уйти?';
+                return e.returnValue;
+            }
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }, [pendingChanges.length, isSaving]);
 
     const saveOrderToServer = async (order: string[]) => {
         try {
@@ -173,6 +232,19 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
         );
     };
 
+    const getDisplayShiftType = (employeeId: string, date: Date, currentShift: Shift | undefined) => {
+        const pendingChange = pendingChanges.find(change =>
+            change.employeeId === employeeId &&
+            change.date.toDateString() === date.toDateString()
+        );
+
+        if (pendingChange) {
+            return pendingChange.shiftType;
+        }
+
+        return currentShift?.shiftType || 'NOT_WORKING';
+    };
+
     const handleEmployeeHeaderClick = () => {
         setSortByAlphabet(prev => !prev);
         setSelectedEmployeeId(null);
@@ -221,16 +293,89 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
         await saveOrderToServer(defaultOrder);
     };
 
-    const handleShiftClick = (employeeId: string, date: Date, currentShiftType: string) => {
-        if (isReadOnly) {
+    const handleShiftClick = useCallback((employeeId: string, date: Date, currentShiftType: string) => {
+        if (isReadOnly || isLoading || isSaving) {
             return;
         }
 
+        const currentShift = getShiftForEmployee(employeeId, date);
         const currentIndex = SHIFT_TYPES.findIndex(type => type.value === currentShiftType);
         const nextIndex = (currentIndex + 1) % SHIFT_TYPES.length;
         const nextShiftType = SHIFT_TYPES[nextIndex].value;
 
+        setPendingChanges(prev => {
+            const filtered = prev.filter(change =>
+                !(change.employeeId === employeeId &&
+                    change.date.toDateString() === date.toDateString())
+            );
+
+            return [...filtered, {
+                employeeId,
+                date,
+                shiftType: nextShiftType,
+                shiftId: currentShift?.id
+            }];
+        });
+
         onShiftChange(employeeId, date, nextShiftType);
+    }, [isReadOnly, isLoading, isSaving, onShiftChange]);
+
+    const saveAllChanges = async () => {
+        if (pendingChanges.length === 0) return;
+
+        setIsSaving(true);
+        setSaveError(null);
+        setSaveSuccess(false);
+
+        try {
+            const createPromises = [];
+            const updatePromises = [];
+
+            for (const change of pendingChanges) {
+                if (change.shiftId) {
+                    updatePromises.push(
+                        shiftService.updateShift(change.shiftId, change.shiftType)
+                    );
+                } else {
+                    createPromises.push(
+                        shiftService.createShift(
+                            calendarId,
+                            change.employeeId,
+                            change.date,
+                            change.shiftType
+                        )
+                    );
+                }
+            }
+
+            await Promise.all([...createPromises, ...updatePromises]);
+
+            setPendingChanges([]);
+            setSaveSuccess(true);
+
+            if (onDataRefresh) {
+                onDataRefresh();
+            }
+
+            setTimeout(() => setSaveSuccess(false), 3000);
+
+        } catch (error) {
+            console.error('Ошибка при сохранении изменений:', error);
+            setSaveError('Не удалось сохранить изменения. Попробуйте еще раз.');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const cancelChanges = async () => {
+        if (pendingChanges.length === 0) return;
+
+        setPendingChanges([]);
+        setSaveError(null);
+
+        if (onDataRefresh) {
+            onDataRefresh();
+        }
     };
 
     const goToPreviousMonth = () => {
@@ -262,17 +407,17 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                                 ? 'bg-blue-500 text-white'
                                 : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
                         }`}
-                        disabled={isLoading}
+                        disabled={isLoading || isSaving}
                         title={sortByAlphabet
                             ? "Нажмите чтобы отключить сортировку по алфавиту"
                             : "Нажмите чтобы включить сортировку по алфавиту"
                         }
                     >
                         {sortByAlphabet ? 'Сортировка по алфавиту' : 'Ручная сортировка'}
-                        {isLoading && ' (загрузка...)'}
+                        {(isLoading || isSaving) && ' (загрузка...)'}
                     </button>
 
-                    {!sortByAlphabet && (
+                    {!sortByAlphabet && !isLoading && (
                         <div className="flex items-center gap-2">
                             {selectedEmployeeId ? (
                                 <>
@@ -282,7 +427,7 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                                     <button
                                         onClick={moveEmployeeUp}
                                         className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
-                                        disabled={!selectedEmployeeId || manualOrder.indexOf(selectedEmployeeId) === 0 || isLoading}
+                                        disabled={!selectedEmployeeId || manualOrder.indexOf(selectedEmployeeId) === 0 || isSaving}
                                         title="Переместить вверх"
                                     >
                                         ↑
@@ -290,7 +435,7 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                                     <button
                                         onClick={moveEmployeeDown}
                                         className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
-                                        disabled={!selectedEmployeeId || manualOrder.indexOf(selectedEmployeeId) === manualOrder.length - 1 || isLoading}
+                                        disabled={!selectedEmployeeId || manualOrder.indexOf(selectedEmployeeId) === manualOrder.length - 1 || isSaving}
                                         title="Переместить вниз"
                                     >
                                         ↓
@@ -300,7 +445,7 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                                 <button
                                     onClick={resetManualOrder}
                                     className="px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600 text-sm disabled:bg-gray-300 disabled:cursor-not-allowed"
-                                    disabled={isLoading}
+                                    disabled={isSaving}
                                     title="Сбросить порядок сотрудников"
                                 >
                                     Сбросить порядок
@@ -310,17 +455,41 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                     )}
                 </div>
 
-                {!sortByAlphabet && (
-                    <div className="text-sm text-gray-500">
-                        {isLoading
-                            ? "Загрузка порядка сотрудников..."
-                            : selectedEmployeeId
-                                ? "Кликните на сотрудника для выбора, затем используйте стрелки"
-                                : "Кликните на сотрудника чтобы выбрать для перемещения"
-                        }
+                {pendingChanges.length > 0 && !isLoading && (
+                    <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-600 mr-2">
+                            Несохраненные изменения: {pendingChanges.length}
+                        </span>
+                        <button
+                            onClick={saveAllChanges}
+                            disabled={isSaving}
+                            className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center"
+                        >
+                            {isSaving ? (
+                                <>
+                                    <span className="inline-block animate-spin mr-2">⟳</span>
+                                    Сохранение...
+                                </>
+                            ) : (
+                                'Сохранить все изменения'
+                            )}
+                        </button>
+                        <button
+                            onClick={cancelChanges}
+                            disabled={isSaving}
+                            className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                        >
+                            Отмена
+                        </button>
                     </div>
                 )}
             </div>
+
+            {saveSuccess && (
+                <div className="mb-4 p-3 bg-green-100 border border-green-300 text-green-700 rounded-lg">
+                    ✅ Изменения успешно сохранены!
+                </div>
+            )}
 
             {saveError && (
                 <div className="mb-4 p-3 bg-red-100 border border-red-300 text-red-700 rounded-lg">
@@ -334,11 +503,22 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                 </div>
             )}
 
+            {!sortByAlphabet && (
+                <div className="text-sm text-gray-500 mb-4">
+                    {isLoading
+                        ? "Загрузка порядка сотрудников..."
+                        : selectedEmployeeId
+                            ? "Кликните на сотрудника для выбора, затем используйте стрелки"
+                            : "Кликните на сотрудника чтобы выбрать для перемещения"
+                    }
+                </div>
+            )}
+
             <div className="flex justify-between items-center mb-6">
                 <button
                     onClick={goToPreviousMonth}
                     className="bg-white border-black border-1 text-1xl text-black px-4 py-2 rounded transition-colors select-none"
-                    disabled={isLoading}
+                    disabled={isLoading || isSaving}
                 >
                     ←
                 </button>
@@ -355,9 +535,9 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                             Сортировка по алфавиту
                         </div>
                     )}
-                    {isLoading && (
+                    {(isLoading || isSaving) && (
                         <div className="text-sm text-gray-500 mt-1 select-none">
-                            Загрузка...
+                            {isSaving ? "Сохранение..." : "Загрузка..."}
                         </div>
                     )}
                 </div>
@@ -365,7 +545,7 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                 <button
                     onClick={goToNextMonth}
                     className="bg-white border-black border-1 text-1xl text-black px-4 py-2 rounded transition-colors select-none"
-                    disabled={isLoading}
+                    disabled={isLoading || isSaving}
                 >
                     →
                 </button>
@@ -383,10 +563,10 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                                 ? 'bg-blue-50 border-blue-300 hover:bg-blue-100'
                                 : 'bg-white hover:bg-gray-100'
                             }
-                                ${isLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+                                ${(isLoading || isSaving) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
                             `}
-                            onClick={isLoading ? undefined : handleEmployeeHeaderClick}
-                            title={isLoading
+                            onClick={(isLoading || isSaving) ? undefined : handleEmployeeHeaderClick}
+                            title={(isLoading || isSaving)
                                 ? "Загрузка..."
                                 : sortByAlphabet
                                     ? "Нажмите чтобы отключить сортировку по алфавиту"
@@ -410,7 +590,7 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                                     key={day.toISOString()}
                                     className={`border border-gray-300 p-2 text-center min-w-12 select-none ${
                                         isWeekend ? 'bg-blue-100' : 'bg-white'
-                                    } ${isLoading ? 'opacity-50' : ''}`}
+                                    } ${(isLoading || isSaving) ? 'opacity-50' : ''}`}
                                 >
                                     <div className="text-sm font-medium select-none">
                                         {day.getDate()}
@@ -427,7 +607,7 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                     <tbody>
                     {sortedEmployees.map((employee, employeeIndex) => {
                         const isSelected = selectedEmployeeId === employee.id;
-                        const isSelectable = !sortByAlphabet && !isLoading;
+                        const isSelectable = !sortByAlphabet && !isLoading && !isSaving;
 
                         return (
                             <React.Fragment key={employee.id}>
@@ -443,10 +623,10 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                                                 : 'bg-white hover:bg-gray-50'
                                         }
                                             ${isSelectable ? 'cursor-pointer' : 'cursor-default'}
-                                            ${isLoading ? 'opacity-50' : ''}
+                                            ${(isLoading || isSaving) ? 'opacity-50' : ''}
                                         `}
                                         onClick={() => isSelectable && handleEmployeeClick(employee.id)}
-                                        title={isLoading
+                                        title={(isLoading || isSaving)
                                             ? "Загрузка..."
                                             : isSelectable
                                                 ? isSelected
@@ -465,35 +645,41 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
 
                                     {daysInMonth.map(day => {
                                         const shift = getShiftForEmployee(employee.id, day);
+                                        const displayShiftType = getDisplayShiftType(employee.id, day, shift);
                                         const shiftType = SHIFT_TYPES.find(
-                                            type => type.value === (shift?.shiftType || 'NOT_WORKING')
+                                            type => type.value === displayShiftType
                                         ) || SHIFT_TYPES[0];
+
+                                        const hasPendingChange = pendingChanges.some(change =>
+                                            change.employeeId === employee.id &&
+                                            change.date.toDateString() === day.toDateString()
+                                        );
 
                                         const isWeekend = day.getDay() === 0 || day.getDay() === 6;
 
                                         return (
                                             <td
                                                 key={day.toISOString()}
-                                                className={`border border-gray-300 p-1 text-center select-none ${
-                                                    isReadOnly || isLoading
+                                                className={`border border-gray-300 text-center select-none ${
+                                                    isReadOnly || isLoading || isSaving
                                                         ? 'cursor-not-allowed opacity-90'
                                                         : 'cursor-pointer hover:opacity-80 hover:shadow-md'
                                                 } ${
                                                     isWeekend ? 'bg-blue-100' : 'bg-white'
-                                                } ${isLoading ? 'opacity-50' : ''}`}
-                                                onClick={() => !isLoading && handleShiftClick(
+                                                } ${hasPendingChange ? '' : ''}`}
+                                                onClick={() => !isLoading && !isSaving && handleShiftClick(
                                                     employee.id,
                                                     day,
-                                                    shift?.shiftType || 'NOT_WORKING'
+                                                    displayShiftType
                                                 )}
-                                                title={isLoading
+                                                title={(isLoading || isSaving)
                                                     ? "Загрузка..."
-                                                    : isReadOnly
-                                                        ? `${employee.name}, ${day.toLocaleDateString()}: ${shiftType.title} (только просмотр)`
+                                                    : hasPendingChange
+                                                        ? `${employee.name}, ${day.toLocaleDateString()}: ${shiftType.title} (не сохранено)`
                                                         : `${employee.name}, ${day.toLocaleDateString()}: ${shiftType.title}`
                                                 }
                                             >
-                                                <div className={`${shiftType.color} rounded p-2 text-lg select-none`}>
+                                                <div className={`${shiftType.color} p-2 text-lg select-none`}>
                                                     {shiftType.label}
                                                 </div>
                                             </td>
@@ -507,7 +693,7 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                                             border border-gray-300 p-2 font-medium sticky left-0 z-10 
                                             select-none bg-gray-100
                                             ${sortByAlphabet ? 'bg-blue-50' : 'bg-gray-100'}
-                                            ${isLoading ? 'opacity-50' : ''}
+                                            ${(isLoading || isSaving) ? 'opacity-50' : ''}
                                         `}>
                                             <div className="text-sm text-gray-600">Сотрудник</div>
                                         </td>
@@ -519,7 +705,7 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                                                     key={`duplicate-${day.toISOString()}`}
                                                     className={`border border-gray-300 p-2 text-center min-w-12 select-none ${
                                                         isWeekend ? 'bg-blue-100' : 'bg-gray-100'
-                                                    } ${isLoading ? 'opacity-50' : ''}`}
+                                                    } ${(isLoading || isSaving) ? 'opacity-50' : ''}`}
                                                 >
                                                     <div className="text-sm font-medium select-none">
                                                         {day.getDate()}
@@ -550,6 +736,11 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                         </div>
                     ))}
                 </div>
+                {pendingChanges.length > 0 && (
+                    <div className="text-center text-sm text-yellow-600">
+                        ⚠️ У вас есть {pendingChanges.length} несохраненных изменений
+                    </div>
+                )}
             </div>
         </div>
     );
